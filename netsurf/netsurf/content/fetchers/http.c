@@ -32,7 +32,7 @@ char header; //unknown size
 
 
 int (* __stdcall http_init)();
-unsigned int (* __stdcall http_get) (char * url); //yay, it's NOT uint, but hey, C is stubborn, and I'm dumb
+unsigned int (* __stdcall http_get) (char * url, char * add_head); //yay, it's NOT uint, but hey, C is stubborn, and I'm dumb
 int (* __stdcall http_process) (unsigned int identifier);
 void (* __stdcall http_free) (unsigned int identifier);
 
