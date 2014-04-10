@@ -358,22 +358,6 @@ fetch_file_process_error_aborted:
 }
 
 
-int is_pid(int k)
-{
-	int error;
-asm volatile ("int $0x40":"=a"(error):"a"(18), "b"(21), "c"(k));
-return error;
-}
-
-
-int kill_pid(int k)
-{
-	int error;
-asm volatile ("int $0x40":"=a"(error):"a"(18), "b"(18), "c"(k));
-return error;
-}
-
-
 static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	char ps[96], str[128];
 	sprintf(ps, "Yay! Path is %s", ctx->path);
@@ -381,72 +365,35 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	
 	fetch_msg msg;
 
- /* ERSATZ DOWNLOADER */
- 
- /*
-char zapzap[]="<html><body><h1>HOOLE!</h1></body></html>";
-size_t file_size=strlen(zapzap);
-char *buffer = (char*)malloc(file_size * sizeof(char));
-memcpy(buffer, zapzap, file_size * sizeof(char));
-*/
-
-
-  
-
-
     __menuet__debug_out("AHOY!\n");
 	struct http_msg *http_ahoy;
 
 	unsigned int wererat = 0;
     char * pa=ctx->path;
-    asm volatile ("pusha");
-    wererat = http_get(pa, NULL);
-	asm volatile ("popa");
+    asm volatile ("pusha");		// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
+    wererat = http_get(pa, NULL);	// TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.
+	asm volatile ("popa");		// ....
 	__menuet__debug_out("HTTP GOT!\n");
 	int result;
 
     http_ahoy = wererat;
 
-    sprintf (str, "Header %d bytes, content %d bytes, recieved %d bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
+    sprintf (str, "Header %d bytes, content %d bytes, received %d bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
     __menuet__debug_out(str);
 
-    asm volatile ("pusha");
-    result = http_process(wererat);
-    asm volatile ("popa");
-    while (result == -1)  {
-		asm volatile ("pusha");
+    do  {
+		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
 		result = http_process(wererat);
-		asm volatile ("popa");
-	}
+		asm volatile ("popa");	// ....
+	} while (result == -1)
 
-    http_ahoy=wererat;
-    
-    sprintf (str, "Header %d bytes, content %d bytes, recieved %d bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
+//    http_ahoy = wererat;		// really needed again??
+    sprintf (str, "Header %d bytes, content %d bytes, received %d bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
     __menuet__debug_out(str);
-
-    
-    __menuet__debug_out("All content is here\n");
-    
-	size_t file_size=http_ahoy->content_received;
-	char *buffer = (char*)malloc(file_size * sizeof(char));
-	memcpy(buffer, &(http_ahoy->header)+http_ahoy->header_length, file_size);
-
-	// http_free(wererat);
-    __menuet__debug_out("memcopied\n==\n");
-
-	__menuet__debug_out(buffer);
-	__menuet__debug_out("memcopied\n==\n");
-
-
-//char zapzap[]="<html><body><h1>HOOLE!</h1></body></html>";
-//file_size=strlen(zapzap);
-//char *buffer = (char*)malloc(file_size * sizeof(char));
-//memcpy(buffer, zapzap, file_size * sizeof(char));
-
-
+  
 /* fetch is going to be successful */
 	__menuet__debug_out("Calling fetch_set_http_code call\n");
-	fetch_set_http_code(ctx->fetchh, 200);
+	fetch_set_http_code(ctx->fetchh, http_ahoy->status);		
 	__menuet__debug_out("Returned from fetch_set_http_code call\n");
 
 	/* Any callback can result in the fetch being aborted.
@@ -463,12 +410,13 @@ memcpy(buffer, zapzap, file_size * sizeof(char));
 	/* main data loop */
 	__menuet__debug_out("inside main data loop\n");
 		msg.type = FETCH_DATA;
-		msg.data.header_or_data.buf = (const uint8_t *) buffer;//&(http_ahoy->data) ; //buffer;
-		msg.data.header_or_data.len = file_size;
+		msg.data.header_or_data.buf = &(http_ahoy->content_ptr); 	// lets pray this works..
+		msg.data.header_or_data.len = http_ahoy->content_received;
 	__menuet__debug_out("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
 	__menuet__debug_out("After Calling fetch_curl_send_header\n");
 	
+	http_free(wereat);			
 
 	if (ctx->aborted == false) {
 	__menuet__debug_out("ctx->aborted = false\n");
