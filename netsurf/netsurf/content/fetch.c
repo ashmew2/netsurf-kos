@@ -672,7 +672,7 @@ fetch_send_callback(const fetch_msg *msg, struct fetch *fetch)
 	__menuet__debug_out("Inside fetch_send_callback\n");
 
 	fetch->callback(msg, fetch->p);
-	__menuet__debug_out("After fetch->callback\n");
+	__menuet__debug_out("After fetch->callback \n");
 }
 
 
