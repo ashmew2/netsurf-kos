@@ -380,21 +380,34 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
       __menuet__debug_out("http_get() Succeeded!. [ Return Value Non zero ]\n");      
     
     __menuet__debug_out("HTTP GOT!\n");
-    int result;
+    int result = 1337;
 
     http_ahoy = wererat;
 
     sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
     __menuet__debug_out(str);
 
+    __menuet__debug_out("Going into the do while loop for http_process\n");
+
     do  {
+                __menuet__debug_out("Result is : ");
+                __menuet__debug_out(result);
+		__menuet__debug_out("\n");                
+    
 		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
-		result = http_process(wererat);
+		result = http_process(wererat);		
 		asm volatile ("popa");	// ....
-    } while (result == -1);
+    } while ((result != -1) && (result != 0));
+
+    __menuet__debug_out("After the do while loop for http_process.\n");
+    
+    if(result == 0)
+      __menuet__debug_out("http_process() worked successfully!\n");
+    else
+      __menuet__debug_out("http_process() failed!\n");
 
 //    http_ahoy = wererat;		// really needed again??
-      sprintf (str, "Header %d bytes, content %d bytes, received %d bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
+      sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
     __menuet__debug_out(str);
   
 /* fetch is going to be successful */
@@ -420,8 +433,11 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 		msg.data.header_or_data.len = http_ahoy->content_received;
 	__menuet__debug_out("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
-	__menuet__debug_out("After Calling fetch_curl_send_header\n");
-	
+
+	__menuet__debug_out("Calling http_free with wererat = ");
+	__menuet__debug_out(wererat);
+	__menuet__debug_out("\n");
+			
 	http_free(wererat);			
 
 	if (ctx->aborted == false) {
