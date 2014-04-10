@@ -287,8 +287,11 @@ static inline bool fetch_curl_send_callback(const fetch_msg *msg,
 		struct fetch_curl_context *ctx)
 {
 	ctx->locked = true;
+	__menuet__debug_out("Inside curl_send_cb, Calling send_cb()\n");
+
 	fetch_send_callback(msg, ctx->fetchh);
 	ctx->locked = false;
+	__menuet__debug_out("Returning ctx->aborted.\n");
 
 	return ctx->aborted;
 }
@@ -299,18 +302,23 @@ static bool fetch_curl_send_header(struct fetch_curl_context *ctx,
 	fetch_msg msg;
 	char header[64];
 	va_list ap;
-
+	__menuet__debug_out("Inside fetch_curl_send_header\n");
 	va_start(ap, fmt);
 
 	vsnprintf(header, sizeof header, fmt, ap);
 
 	va_end(ap);
+	__menuet__debug_out("Header is : ");
+	__menuet__debug_out(header);
 
 	msg.type = FETCH_HEADER;
 	msg.data.header_or_data.buf = (const uint8_t *) header;
 	msg.data.header_or_data.len = strlen(header);
+	__menuet__debug_out("\nCalling fetch_curl_send_callback\n");
+
 	fetch_curl_send_callback(&msg, ctx);
 
+	__menuet__debug_out("Returning ctx->aborted\n");
 	return ctx->aborted;
 }
 
@@ -392,12 +400,12 @@ memcpy(buffer, zapzap, file_size * sizeof(char));
 	unsigned int wererat = 0;
     char * pa=ctx->path;
     asm volatile ("pusha");
-    wererat = http_get(pa);
+    wererat = http_get(pa, NULL);
 	asm volatile ("popa");
 	__menuet__debug_out("HTTP GOT!\n");
 	int result;
 
-    http_ahoy=wererat;
+    http_ahoy = wererat;
 
     sprintf (str, "Header %d bytes, content %d bytes, recieved %d bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
     __menuet__debug_out(str);
@@ -421,13 +429,13 @@ memcpy(buffer, zapzap, file_size * sizeof(char));
     
 	size_t file_size=http_ahoy->content_received;
 	char *buffer = (char*)malloc(file_size * sizeof(char));
-	memcpy(buffer, &(http_ahoy->data)+http_ahoy->header_length, file_size);
+	memcpy(buffer, &(http_ahoy->header)+http_ahoy->header_length, file_size);
 
 	// http_free(wererat);
     __menuet__debug_out("memcopied\n==\n");
 
-	//__menuet__debug_out(buffer);
-	//__menuet__debug_out("memcopied\n==\n");
+	__menuet__debug_out(buffer);
+	__menuet__debug_out("memcopied\n==\n");
 
 
 //char zapzap[]="<html><body><h1>HOOLE!</h1></body></html>";
@@ -437,34 +445,41 @@ memcpy(buffer, zapzap, file_size * sizeof(char));
 
 
 /* fetch is going to be successful */
+	__menuet__debug_out("Calling fetch_set_http_code call\n");
 	fetch_set_http_code(ctx->fetchh, 200);
+	__menuet__debug_out("Returned from fetch_set_http_code call\n");
 
 	/* Any callback can result in the fetch being aborted.
 	 * Therefore, we _must_ check for this after _every_ call to
 	 * fetch_file_send_callback().
 	 */
 
-	
+	__menuet__debug_out("Calling fetch_curl_send_header: 1\n");	
 	if (fetch_curl_send_header(ctx, "Content-Type: %s", 
 			fetch_filetype(ctx->path)))
 		goto fetch_file_process_aborted;
 
 	
 	/* main data loop */
-
+	__menuet__debug_out("inside main data loop\n");
 		msg.type = FETCH_DATA;
 		msg.data.header_or_data.buf = (const uint8_t *) buffer;//&(http_ahoy->data) ; //buffer;
 		msg.data.header_or_data.len = file_size;
+	__menuet__debug_out("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
-			
+	__menuet__debug_out("After Calling fetch_curl_send_header\n");
 	
 
 	if (ctx->aborted == false) {
+	__menuet__debug_out("ctx->aborted = false\n");
 		msg.type = FETCH_FINISHED;
+	__menuet__debug_out("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
+	__menuet__debug_out("After Calling fetch_curl_send_callback\n");
 	}
 
 fetch_file_process_aborted:
+	__menuet__debug_out("Inside fetch file_process_aborted label");
 return;
 
 }
