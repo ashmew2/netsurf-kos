@@ -400,7 +400,7 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 		//		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
 		result = http_process(wererat);		
 		//		asm volatile ("popa");	// ....
-    } while ((result != -1) && (result != 0));
+    } while ((result != 0));
 
     __menuet__debug_out("After the do while loop for http_process.\n");
     
