@@ -381,6 +381,7 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
     
     __menuet__debug_out("HTTP GOT!\n");
     int result = 1337;
+    char result_str[12];
 
     http_ahoy = wererat;
 
@@ -390,13 +391,14 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
     __menuet__debug_out("Going into the do while loop for http_process\n");
 
     do  {
+                sprintf(result_str, "%d", result);
                 __menuet__debug_out("Result is : ");
-                __menuet__debug_out(result);
+                __menuet__debug_out(result_str);
 		__menuet__debug_out("\n");                
     
-		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
+		//		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
 		result = http_process(wererat);		
-		asm volatile ("popa");	// ....
+		//		asm volatile ("popa");	// ....
     } while ((result != -1) && (result != 0));
 
     __menuet__debug_out("After the do while loop for http_process.\n");
