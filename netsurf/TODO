@@ -1,0 +1,16 @@
+Libraries need to be made in this order with MENUETLIBC 
+(Reference : NetSurf wiki)
+
+libwapcaplet
+libparserutils
+libcss
+libhubbub
+libdom
+
+# Build the core image decoders
+libnsbmp
+libnsgif
+
+# Build the optional decoders
+librosprite
+libsvgtiny

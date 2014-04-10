@@ -1,0 +1,1 @@
+include $(NSBUILD)/Makefile.subdir
