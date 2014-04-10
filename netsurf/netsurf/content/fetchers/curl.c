@@ -372,9 +372,15 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
     char * pa=ctx->path;
     asm volatile ("pusha");		// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
     wererat = http_get(pa, NULL);	// TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.
-	asm volatile ("popa");		// ....
-	__menuet__debug_out("HTTP GOT!\n");
-	int result;
+
+    if(wererat == 0) /* Error condition : http_get returned 0 */
+      __menuet__debug_out("http_get() failed. [ Return Value 0 ]\n");    
+    else
+      __menuet__debug_out("http_get() Succeeded!. [ Return Value Non zero ]\n");      
+    
+    asm volatile ("popa");		// ....
+    __menuet__debug_out("HTTP GOT!\n");
+    int result;
 
     http_ahoy = wererat;
 
