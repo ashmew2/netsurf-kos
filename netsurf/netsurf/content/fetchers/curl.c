@@ -385,10 +385,10 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
 		result = http_process(wererat);
 		asm volatile ("popa");	// ....
-	} while (result == -1)
+    } while (result == -1);
 
 //    http_ahoy = wererat;		// really needed again??
-    sprintf (str, "Header %d bytes, content %d bytes, received %d bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
+      sprintf (str, "Header %d bytes, content %d bytes, received %d bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
     __menuet__debug_out(str);
   
 /* fetch is going to be successful */
@@ -416,7 +416,7 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 		fetch_curl_send_callback(&msg, ctx);
 	__menuet__debug_out("After Calling fetch_curl_send_header\n");
 	
-	http_free(wereat);			
+	http_free(wererat);			
 
 	if (ctx->aborted == false) {
 	__menuet__debug_out("ctx->aborted = false\n");
