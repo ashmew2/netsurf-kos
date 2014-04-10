@@ -382,6 +382,7 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
     __menuet__debug_out("HTTP GOT!\n");
     int result = 1337;
     char result_str[12];
+    char wererat_str[13];
 
     http_ahoy = wererat;
 
@@ -437,7 +438,8 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 		fetch_curl_send_callback(&msg, ctx);
 
 	__menuet__debug_out("Calling http_free with wererat = ");
-	__menuet__debug_out(wererat);
+	sprintf(wererat_str, "%u", wererat);
+	__menuet__debug_out(wererat_str);
 	__menuet__debug_out("\n");
 			
 	http_free(wererat);			
@@ -451,11 +453,10 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	}
 
 fetch_file_process_aborted:
-	__menuet__debug_out("Inside fetch file_process_aborted label");
+	__menuet__debug_out("Inside fetch file_process_aborted label\n");
 return;
 
 }
-
 
 /**
  * Do some work on current fetches.
