@@ -1,8 +1,16 @@
 netsurf-kos
 ===========
 
-For setting up the toolchain :
+-----------------------------------------------------
+;;;;;;Build instructions and environment setup.;;;;;;
+-----------------------------------------------------
+
 =============================
+For setting up the toolchain:
+=============================
+
+The toolchain is contained in the "me" directory (courtesy, SoUrcerer)
+
 Download the toolchain folder to /home/yourname/me
 now, set up an environment variable MENUETDEV = /home/yourname/me
 
@@ -12,8 +20,7 @@ You can consider putting this in a file like ~/.bashrc so it is initialized each
 
 Once this is done, you're all set to make stuff for KOS!
 
------------------------------------
-
+==============================
 FOR BUILDING _netsurf binary : 
 ==============================
 
@@ -30,9 +37,22 @@ make -f make.all
 
 This will generate the _netsurf binary ready to be used on KolibriOS
 
--------------------------------------------------------------
+-------------IMPORTANT------------------
+There is also a res directory on the repository (courtesy,  SoUrcerer).
 
-NetSurf port for KolibriOS
+The generated _netsurf binary needs to be placed outside the res folder in order to run properly.
+
+For example, if you are running KolibriOS and currently at /usbhd0/1/ , these are the paths :
+
+_netsurf binary : /usbhd0/1/_netsurf
+res directory   : /usbhd0/1/res/
+
+The res directory contains resources such as fonts which help Netsurf run.
+
+-------------------------------------------------------------
+===========================
+NetSurf port for KolibriOS:
+===========================
 
 The netsurf directory is in kolibrios/contrib/network/
 
