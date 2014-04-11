@@ -2,7 +2,7 @@ netsurf-kos
 ===========
 
 -----------------------------------------------------
-;;;;;;Build instructions and environment setup.;;;;;;
+Build instructions and environment setup.
 -----------------------------------------------------
 
 =============================
@@ -37,7 +37,10 @@ make -f make.all
 
 This will generate the _netsurf binary ready to be used on KolibriOS
 
--------------IMPORTANT------------------
+========================================
+IMPORTANT Instruction for res directory:
+========================================
+
 There is also a res directory on the repository (courtesy,  SoUrcerer).
 
 The generated _netsurf binary needs to be placed outside the res folder in order to run properly.
