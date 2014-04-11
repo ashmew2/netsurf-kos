@@ -5,6 +5,8 @@ netsurf-kos
 Build instructions and environment setup.
 -----------------------------------------------------
 
+Please install netsurf-buildsystem from either your official distro repos or use : https://github.com/pcwalton/netsurf-buildsystem
+
 =============================
 For setting up the toolchain:
 =============================
