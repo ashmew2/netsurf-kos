@@ -392,10 +392,10 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
     __menuet__debug_out("Going into the do while loop for http_process\n");
 
     do  {
-                sprintf(result_str, "%d", result);
-                __menuet__debug_out("Result is : ");
-                __menuet__debug_out(result_str);
-		__menuet__debug_out("\n");                
+      //          sprintf(result_str, "%d", result);
+      //          __menuet__debug_out("Result is : ");
+      //          __menuet__debug_out(result_str);
+      //          __menuet__debug_out("\n");                
     
 		//		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
 		result = http_process(wererat);		
@@ -432,7 +432,9 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	/* main data loop */
 	__menuet__debug_out("inside main data loop\n");
 		msg.type = FETCH_DATA;
-		msg.data.header_or_data.buf = &(http_ahoy->content_ptr); 	// lets pray this works..
+
+		msg.data.header_or_data.buf = http_ahoy->content_ptr; 	// lets pray this works..x2
+
 		msg.data.header_or_data.len = http_ahoy->content_received;
 	__menuet__debug_out("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
