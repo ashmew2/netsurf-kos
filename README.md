@@ -7,6 +7,23 @@ Build instructions and environment setup.
 
 Please install netsurf-buildsystem from either your official distro repos or use : https://github.com/pcwalton/netsurf-buildsystem
 
+============================================
+Notes for building libraries inside netsurf/
+============================================
+You need to run the makefiles in the directories where you make changes.
+Then, go one directory up (cd ..) . Use the makefile to generate a .a library.
+This .a library should be put in your $MENUETDEV/lib/ directory.
+This will ensure that the new updated library is used by make.all in netsurf/netsurf/objs.
+
+==========================
+PREREQUISITES:
+==========================
+
+You need :  
+    GNU Make
+    GCC (GNU C COMPILER)
+    pkg-config
+    
 =============================
 For setting up the toolchain:
 =============================
