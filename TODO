@@ -1,0 +1,3 @@
+***Port Netsurf to KolibriOS
+**Improve build system.
+**Port Pthreads to KolibriOS in order to get rid of event looping polls in libnsfb events such as fill.
