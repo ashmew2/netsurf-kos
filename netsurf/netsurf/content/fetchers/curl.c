@@ -357,7 +357,6 @@ fetch_file_process_error_aborted:
 	return;
 }
 
-
 static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	char ps[96], str[128];
 	sprintf(ps, "Yay! Path is %s", ctx->path);
@@ -369,16 +368,16 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	struct http_msg *http_ahoy;
 
 	unsigned int wererat = 0;
-    char * pa=ctx->path;
-    //    asm volatile ("pusha");		// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
-    wererat = http_get(pa, NULL);	// TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.
-    //    asm volatile ("popa");		// ....
+	char * pa=ctx->path;
+	//asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
+	wererat = http_get(pa, NULL);	// TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.
+	//asm volatile ("popa");		// ....
 
-    if(wererat == 0) /* Error condition : http_get returned 0 */
-      __menuet__debug_out("http_get() failed. [ Return Value 0 ]\n");    
-    else
-      __menuet__debug_out("http_get() Succeeded!. [ Return Value Non zero ]\n");      
-    
+	if(wererat == 0) /* Error condition : http_get returned 0 */
+		__menuet__debug_out("http_get() failed. [ Return Value 0 ]\n");
+	else
+		__menuet__debug_out("http_get() Succeeded!. [ Return Value Non zero ]\n");
+
     __menuet__debug_out("HTTP GOT!\n");
     int result = 1337;
     char result_str[12];
@@ -395,19 +394,29 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
       //          sprintf(result_str, "%d", result);
       //          __menuet__debug_out("Result is : ");
       //          __menuet__debug_out(result_str);
-      //          __menuet__debug_out("\n");                
-    
-		//		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
-		result = http_process(wererat);		
+      //          __menuet__debug_out("\n");
+
+      //		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
+                char *s = NULL;
+		result = http_process(wererat);
+		s = http_find_header_field(http_ahoy, "location");
+
+		if(s!=NULL)
+		  {
+		    __menuet__debug_out("This is location from header : ");
+		  __menuet__debug_out(s);
+		  __menuet__debug_out("\n");
+		  }
 		//		asm volatile ("popa");	// ....
     } while ((result != 0));
 
     __menuet__debug_out("After the do while loop for http_process.\n");
     
-    if(result == 0)
+/*    if(result == 0)
       __menuet__debug_out("http_process() worked successfully!\n");
     else
       __menuet__debug_out("http_process() failed!\n");
+*/
 
 //    http_ahoy = wererat;		// really needed again??
       sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
@@ -423,12 +432,12 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	 * fetch_file_send_callback().
 	 */
 
-	__menuet__debug_out("Calling fetch_curl_send_header: 1\n");	
-	if (fetch_curl_send_header(ctx, "Content-Type: %s", 
+	__menuet__debug_out("Calling fetch_curl_send_header: 1\n");
+	if (fetch_curl_send_header(ctx, "Content-Type: %s",
 			fetch_filetype(ctx->path)))
 		goto fetch_file_process_aborted;
 
-	
+
 	/* main data loop */
 	__menuet__debug_out("inside main data loop\n");
 		msg.type = FETCH_DATA;
@@ -439,13 +448,26 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	__menuet__debug_out("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
 
+	__menuet__debug_out("STATUS : ");
+	sprintf(result_str, "%u", http_ahoy->status);
+	__menuet__debug_out(result_str);
+	__menuet__debug_out("\n");
+
+	__menuet__debug_out("Content : ");
+	__menuet__debug_out(http_ahoy->content_ptr);
+	__menuet__debug_out("\n");
+
+	__menuet__debug_out("Header : ");
+	__menuet__debug_out(http_ahoy->header);
+	__menuet__debug_out("\n");
+
 	__menuet__debug_out("Calling http_free with wererat = ");
 	sprintf(wererat_str, "%u", wererat);
 	__menuet__debug_out(wererat_str);
 	__menuet__debug_out("\n");
-			
+	
 	http_free(wererat);			
-
+		
 	if (ctx->aborted == false) {
 	__menuet__debug_out("ctx->aborted = false\n");
 		msg.type = FETCH_FINISHED;
@@ -453,7 +475,7 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 		fetch_curl_send_callback(&msg, ctx);
 	__menuet__debug_out("After Calling fetch_curl_send_callback\n");
 	}
-
+	
 fetch_file_process_aborted:
 	__menuet__debug_out("Inside fetch file_process_aborted label\n");
 return;
