@@ -13,8 +13,6 @@ int kol_exit(){
 	__menuet__sys_exit();
 }
 
-
-
 struct http_msg {
 // internal used by library, dont mess with these.
 unsigned int socket;
@@ -55,6 +53,46 @@ int HTTP_YAY(){
 }
 
 ///===========================
+
+/*This utility function should go to it's proper location once some progress is made : 
+Puts a string from src when a newline/cl/rf/clrf/space/tab is encountered into dest
+and null terminates dest
+*/
+// Assumes the dest is big enough to hold the string.
+
+char *return_null_terminated_string(char *dest, char *src)
+{
+  int i = 0;
+  int break_loop = 0;
+
+  if(src == 0)
+    return NULL;
+
+  while(*src)
+    {
+      switch(*src)
+	{
+	case '\n':
+	case 'r':
+	case '\t':
+	case ' ':
+	  break_loop = 1;
+	  break;
+
+	default:
+	  *(dest+i) = *src;
+	  src++;
+	  i++;
+	  break;
+	}
+
+      if(break_loop)
+	break;
+    }
+  *(dest+i) = '\0';
+
+  return dest;
+}
 
 void HTTP_INIT()
 {

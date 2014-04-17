@@ -62,6 +62,9 @@
  */
 #include <desktop/browser.h>
 
+#define DEBUGGER(s) __menuet__debug_out(s)
+#define MAX_REDIRECTIONS_ALLOWED 5
+
 /* uncomment this to use scheduler based calling
 #define FETCHER_CURLL_SCHEDULED 1
 */
@@ -357,18 +360,87 @@ fetch_file_process_error_aborted:
 	return;
 }
 
+/**
+ * Find the status code and content type and inform the caller.
+ *
+ * Return true if the fetch is being aborted.
+ */
+
+bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg *http_ahoy)
+{
+	long http_code;
+	long error_code;
+	fetch_msg msg;
+	char *header_location_field = (char *)malloc(200);
+	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field(http_ahoy, "location"));
+
+	/* f->had_headers = true; */
+
+	/* if (!f->http_code)nn */
+	/* { */
+	/* 	code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
+	/* 				 &f->http_code); */
+	/* 	fetch_set_http_code(f->fetch_handle, f->http_code); */
+	/* 	assert(code == CURLE_OK); */
+	/* } */
+
+	http_code = http_ahoy->status;
+	LOG(("HTTP status code %li", http_code));
+	
+	if (http_code == 304) /* && !f->post_urlenc && !f->post_multipart) */ {
+		/* Not Modified && GET request */
+	  DEBUGGER("Found 304 in func()\n"); 
+	  msg.type = FETCH_NOTMODIFIED;
+		fetch_send_callback(&msg, ctx->fetchh);
+		return true;
+	}
+
+	/* handle HTTP redirects (3xx response codes) */
+	if (300 <= http_code && http_code < 400 && header_location_field != NULL) {
+	  LOG(("FETCH_REDIRECT, '%s'", header_location_field));
+	  DEBUGGER("Found 300-400 in func()\n"); 		msg.type = FETCH_REDIRECT;
+		msg.data.redirect = header_location_field;
+		fetch_send_callback(&msg, ctx->fetchh);
+		return true;
+	}
+
+	/* /\* handle HTTP 401 (Authentication errors) *\/ */
+	/* if (http_code == 401) { */
+	/* 	msg.type = FETCH_AUTH; */
+	/* 	msg.data.auth.realm = f->realm; */
+	/* 	fetch_send_callback(&msg, ctx->fetchh); */
+	/* 	return true; */
+	/* } */
+
+	/* handle HTTP errors (non 2xx response codes) */
+	if (http_code < 200 || 299 < http_code) {
+		msg.type = FETCH_ERROR;
+		DEBUGGER("Found non 2xx in func()\n"); 
+		msg.data.error = messages_get("Not2xx");
+		fetch_send_callback(&msg, ctx->fetchh);
+		return true;
+	}
+
+	if (ctx->aborted)
+		return true;
+
+	return false;
+}
+
 static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	char ps[96], str[128];
-	sprintf(ps, "Yay! Path is %s", ctx->path);
+	sprintf(ps, "Yay! Path is %s\n", ctx->path);
 	execl ("/sys/@notify", ps, 0);
+	
+	__menuet__debug_out(ps);
 	
 	fetch_msg msg;
 
-    __menuet__debug_out("AHOY!\n");
+	__menuet__debug_out("AHOY!\n");
 	struct http_msg *http_ahoy;
 
 	unsigned int wererat = 0;
-	char * pa=ctx->path;
+	char *pa=ctx->path;
 	//asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
 	wererat = http_get(pa, NULL);	// TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.
 	//asm volatile ("popa");		// ....
@@ -389,26 +461,58 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
     __menuet__debug_out(str);
 
     __menuet__debug_out("Going into the do while loop for http_process\n");
+        
+    do  
+      result = http_process(wererat);
+    while (result != 0);
+    
+    /* switch(http_ahoy->status) */
+    /*   {	 */
+    /* 	char s[100]; */
+    /* 	char *p = NULL; */
+    /* 	int redirections = 0; */
 
-    do  {
-      //          sprintf(result_str, "%d", result);
-      //          __menuet__debug_out("Result is : ");
-      //          __menuet__debug_out(result_str);
-      //          __menuet__debug_out("\n");
+    /*   case 302: */
+    /* 	for(redirections = 0; redirections < MAX_REDIRECTIONS_ALLOWED; redirections++) */
+    /* 	  { */
+    /* 	    __menuet__debug_out("Start of redirections loop\n");	     */
+    /* 	    p = NULL; */
+    /* 	    p = return_null_terminated_string(s, http_find_header_field(http_ahoy, "location")); */
 
-      //		asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
-                char *s = NULL;
-		result = http_process(wererat);
-		s = http_find_header_field(http_ahoy, "location");
+    /* 	    if(!p)  */
+    /* 	      { */
+    /* 		__menuet__debug_out("Inside redirecting loop, http_find_header_field() returned NULL!\n");	      	       */
+    /* 		break;	       */
+    /* 	      } */
 
-		if(s!=NULL)
-		  {
-		    __menuet__debug_out("This is location from header : ");
-		  __menuet__debug_out(s);
-		  __menuet__debug_out("\n");
-		  }
-		//		asm volatile ("popa");	// ....
-    } while ((result != 0));
+    /* 	    __menuet__debug_out(s); */
+    /* 	    __menuet__debug_out("\n"); */
+	    
+    /* 	    wererat = http_get(s, NULL); */
+    /* 	    http_ahoy = wererat; */
+	    
+    /* 	    if(!wererat) */
+    /* 	      { */
+    /* 		__menuet__debug_out("Inside redirecting loop, wererat is zero!\n");	       */
+    /* 		break;	       */
+    /* 	      } */
+	    
+    /* 	    do   */
+    /* 	      result = http_process(wererat); */
+    /* 	    while (result != 0);	    	     */
+
+    /* 	    if(http_ahoy->status != 302)	       */
+    /* 	      break; */
+	      
+    /* 	    __menuet__debug_out("End of redirections loop\n"); */
+    /* 	  } */
+    /* 	ctx->path = s; */
+    /* 	break; */
+	
+    /*   default: */
+    /* 	__menuet__debug_out("Status is NOT 302 \n"); */
+    /* 	break; */
+    /*   } */
 
     __menuet__debug_out("After the do while loop for http_process.\n");
     
@@ -423,16 +527,17 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
     __menuet__debug_out(str);
   
 /* fetch is going to be successful */
-	__menuet__debug_out("Calling fetch_set_http_code call\n");
+
 	fetch_set_http_code(ctx->fetchh, http_ahoy->status);		
-	__menuet__debug_out("Returned from fetch_set_http_code call\n");
 
 	/* Any callback can result in the fetch being aborted.
 	 * Therefore, we _must_ check for this after _every_ call to
 	 * fetch_file_send_callback().
 	 */
+	__menuet__debug_out("Calling fetch_curl_process_headers\n");
+	fetch_curl_process_headers(ctx, http_ahoy);
 
-	__menuet__debug_out("Calling fetch_curl_send_header: 1\n");
+
 	if (fetch_curl_send_header(ctx, "Content-Type: %s",
 			fetch_filetype(ctx->path)))
 		goto fetch_file_process_aborted;
@@ -467,7 +572,8 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	__menuet__debug_out("\n");
 	
 	http_free(wererat);			
-		
+	wererat = 0;
+
 	if (ctx->aborted == false) {
 	__menuet__debug_out("ctx->aborted = false\n");
 		msg.type = FETCH_FINISHED;
