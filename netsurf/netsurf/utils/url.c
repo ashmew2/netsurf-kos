@@ -787,8 +787,14 @@ url_func_result url_unescape(const char *str, char **result)
 {
 	char *curlstr;
 	char *retstr;
-
+	char *address;	
+	
 	__menuet__debug_out("Inside url_unescape()\n");
+	__menuet__debug_out("Address of url_unescape() : ");
+	sprintf(address, "%u", &url_unescape);
+	__menuet__debug_out(address);
+	__menuet__debug_out("\n");
+
 	//curlstr = curl_unescape(str, 0);
 	curlstr = http_unescape_url(str);
 
