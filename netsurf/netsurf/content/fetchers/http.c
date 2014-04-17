@@ -73,7 +73,7 @@ char *return_null_terminated_string(char *dest, char *src)
       switch(*src)
 	{
 	case '\n':
-	case 'r':
+	case '\r':
 	case '\t':
 	case ' ':
 	  break_loop = 1;
