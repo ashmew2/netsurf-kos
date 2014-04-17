@@ -104,32 +104,48 @@ if (imp == NULL)
 http_init = ( __stdcall  int(*)()) 
 		__kolibri__cofflib_getproc (imp, "lib_init");
 if (http_init == NULL)
-	kol_exit();
+  {
+  __menuet__debug_out("http_init() is NULL. Exiting.\n");
+  kol_exit();
+  }
 
 http_get = ( __stdcall  unsigned int (*)(char*)) 
 		__kolibri__cofflib_getproc  (imp, "get");
 if (http_get == NULL)
-	kol_exit();
-
+  {
+    __menuet__debug_out("http_get() is NULL. Exiting.\n");
+    kol_exit();
+  }
 http_free = ( __stdcall  void (*)(unsigned int)) 
 		__kolibri__cofflib_getproc  (imp, "free");
 if (http_free == NULL)
-	kol_exit();
-	
+  {
+    __menuet__debug_out("http_free() is NULL. Exiting.\n");
+    kol_exit();
+  }	
 http_process = ( __stdcall  int (*)(unsigned int)) 
 		__kolibri__cofflib_getproc  (imp, "process");
 if (http_process == NULL)
-	kol_exit();
+  {
+    __menuet__debug_out("http_process() is NULL. Exiting.\n");
+    kol_exit();
+  }
 
 http_find_header_field = ( __stdcall  char *(*)(struct http_msg*, char *)) 
 		__kolibri__cofflib_getproc  (imp, "find_header_field");
 if (http_find_header_field == NULL)
-	kol_exit();
+  {
+    __menuet__debug_out("http_find_header_field() is NULL. Exiting.\n");
+    kol_exit();
+  }
 
 http_unescape_url = ( __stdcall char *(*)(char *))
 		__kolibri__cofflib_getproc  (imp, "HTTP_unescape");
 if(http_unescape_url == NULL)
-   kol_exit();
+  {
+    __menuet__debug_out("http_unescape_url() is NULL. Exiting.\n");
+    kol_exit();
+  }
 
 __menuet__debug_out("HTTP init...\n");
 HTTP_YAY();
