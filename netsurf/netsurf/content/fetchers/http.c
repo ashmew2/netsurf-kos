@@ -37,9 +37,8 @@ int (* __stdcall http_init)();
 unsigned int (* __stdcall http_get) (char * url, char * add_head); //yay, it's NOT uint, but hey, C is stubborn, and I'm dumb
 int (* __stdcall http_process) (unsigned int identifier);
 void (* __stdcall http_free) (unsigned int identifier);
-
 char * (* __stdcall http_find_header_field) (char *field_name, struct http_msg *http_ahoy); //This is crazzzzzzyyyyyy
-// Example used to craft the above prototype : Find_header_field(http_ahoy, "location:");
+char * (* __stdcall http_unescape_url) (char *url_asciiz);
 
 int HTTP_YAY(){
 	asm volatile ("pusha\n\
@@ -122,10 +121,15 @@ http_process = ( __stdcall  int (*)(unsigned int))
 if (http_process == NULL)
 	kol_exit();
 
- http_find_header_field = ( __stdcall  char *(*)(struct http_msg*, char *)) 
+http_find_header_field = ( __stdcall  char *(*)(struct http_msg*, char *)) 
 		__kolibri__cofflib_getproc  (imp, "find_header_field");
 if (http_find_header_field == NULL)
 	kol_exit();
+
+http_unescape_url = ( __stdcall char *(*)(char *))
+		__kolibri__cofflib_getproc  (imp, "HTTP_unescape");
+if(http_unescape_url == NULL)
+   kol_exit();
 
 __menuet__debug_out("HTTP init...\n");
 HTTP_YAY();
