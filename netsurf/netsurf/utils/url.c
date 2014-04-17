@@ -788,7 +788,9 @@ url_func_result url_unescape(const char *str, char **result)
 	char *curlstr;
 	char *retstr;
 
-	curlstr = curl_unescape(str, 0);
+	//curlstr = curl_unescape(str, 0);
+	curlstr = http_unescape_url(str);
+
 	if (curlstr == NULL) {
 		return URL_FUNC_NOMEM;
 	}
@@ -821,6 +823,8 @@ url_func_result url_escape(const char *unescaped, size_t toskip,
 	size_t len;
 	char *escaped, *d, *tmpres;
 	const char *c;
+	
+	__menuet__debug_out("Inside url_escape() function");
 
 	if (!unescaped || !result)
 		return URL_FUNC_FAILED;
