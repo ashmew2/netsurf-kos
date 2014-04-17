@@ -140,7 +140,7 @@ if (http_find_header_field == NULL)
   }
 
 http_unescape_url = ( __stdcall char *(*)(char *))
-		__kolibri__cofflib_getproc  (imp, "HTTP_unescape");
+		__kolibri__cofflib_getproc  (imp, "unescape");
 if(http_unescape_url == NULL)
   {
     __menuet__debug_out("http_unescape_url() is NULL. Exiting.\n");
