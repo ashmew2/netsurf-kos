@@ -62,7 +62,7 @@
  */
 #include <desktop/browser.h>
 
-#define DEBUGGER(s) __menuet__debug_out(s)
+#define DBG(s) __menuet__debug_out(s)
 #define MAX_REDIRECTIONS_ALLOWED 5
 
 /* uncomment this to use scheduler based calling
@@ -389,7 +389,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	
 	if (http_code == 304) /* && !f->post_urlenc && !f->post_multipart) */ {
 		/* Not Modified && GET request */
-	  DEBUGGER("Found 304 in func()\n"); 
+	  DBG("Found 304 in func()\n"); 
 	  msg.type = FETCH_NOTMODIFIED;
 		fetch_send_callback(&msg, ctx->fetchh);
 		return true;
@@ -398,7 +398,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	/* handle HTTP redirects (3xx response codes) */
 	if (300 <= http_code && http_code < 400 && header_location_field != NULL) {
 	  LOG(("FETCH_REDIRECT, '%s'", header_location_field));
-	  DEBUGGER("Found 300-400 in func()\n");
+	  DBG("Found 300-400 in func()\n");
  		msg.type = FETCH_REDIRECT;
 		msg.data.redirect = header_location_field;
 		fetch_send_callback(&msg, ctx->fetchh);
@@ -416,7 +416,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	/* handle HTTP errors (non 2xx response codes) */
 	if (http_code < 200 || 299 < http_code) {
 		msg.type = FETCH_ERROR;
-		DEBUGGER("Found non 2xx in func()\n"); 
+		DBG("Found non 2xx in func()\n"); 
 		msg.data.error = messages_get("Not2xx");
 		fetch_send_callback(&msg, ctx->fetchh);
 		return true;
@@ -442,9 +442,8 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 
 	unsigned int wererat = 0;
 	char *pa=ctx->path;
-	//asm volatile ("pusha");	// TODO: verify if this is still needed. It used to be an issue with the library but should be fixed now.
+
 	wererat = http_get(pa, NULL);	// TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.
-	//asm volatile ("popa");		// ....
 
 	if(wererat == 0) /* Error condition : http_get returned 0 */
 		__menuet__debug_out("http_get() failed. [ Return Value 0 ]\n");
@@ -459,71 +458,12 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	http_ahoy = wererat;
 	
 	sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
-	__menuet__debug_out(str);
-	
-	__menuet__debug_out("Going into the do while loop for http_process\n");
+	__menuet__debug_out(str);	
         
 	do  
 	  result = http_process(wererat);
 	while (result != 0);
 	
-	/* switch(http_ahoy->status) */
-	/*   {	 */
-	/* 	char s[100]; */
-	/* 	char *p = NULL; */
-	/* 	int redirections = 0; */
-	
-	/*   case 302: */
-	/* 	for(redirections = 0; redirections < MAX_REDIRECTIONS_ALLOWED; redirections++) */
-	/* 	  { */
-	/* 	    __menuet__debug_out("Start of redirections loop\n");	     */
-	/* 	    p = NULL; */
-	/* 	    p = return_null_terminated_string(s, http_find_header_field(http_ahoy, "location")); */
-	
-	/* 	    if(!p)  */
-	/* 	      { */
-	/* 		__menuet__debug_out("Inside redirecting loop, http_find_header_field() returned NULL!\n");	      	       */
-	/* 		break;	       */
-	/* 	      } */
-	
-	/* 	    __menuet__debug_out(s); */
-	/* 	    __menuet__debug_out("\n"); */
-	
-	/* 	    wererat = http_get(s, NULL); */
-	/* 	    http_ahoy = wererat; */
-	
-	/* 	    if(!wererat) */
-	/* 	      { */
-	/* 		__menuet__debug_out("Inside redirecting loop, wererat is zero!\n");	       */
-	/* 		break;	       */
-	/* 	      } */
-	
-	/* 	    do   */
-	/* 	      result = http_process(wererat); */
-	/* 	    while (result != 0);	    	     */
-	
-	/* 	    if(http_ahoy->status != 302)	       */
-	/* 	      break; */
-	
-	/* 	    __menuet__debug_out("End of redirections loop\n"); */
-	/* 	  } */
-	/* 	ctx->path = s; */
-	/* 	break; */
-	
-	/*   default: */
-	/* 	__menuet__debug_out("Status is NOT 302 \n"); */
-	/* 	break; */
-	/*   } */
-	
-	__menuet__debug_out("After the do while loop for http_process.\n");
-	
-	/*    if(result == 0)
-	      __menuet__debug_out("http_process() worked successfully!\n");
-	      else
-	      __menuet__debug_out("http_process() failed!\n");
-	*/
-	
-	//    http_ahoy = wererat;		// really needed again??
 	sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
 	__menuet__debug_out(str);
 	
