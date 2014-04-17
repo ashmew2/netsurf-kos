@@ -788,12 +788,20 @@ url_func_result url_unescape(const char *str, char **result)
 	char *curlstr;
 	char *retstr;
 
+	__menuet__debug_out("Inside url_unescape()\n");
 	//curlstr = curl_unescape(str, 0);
 	curlstr = http_unescape_url(str);
 
 	if (curlstr == NULL) {
-		return URL_FUNC_NOMEM;
+	  __menuet__debug_out("curlstr is NULL!\n");	
+	  return URL_FUNC_NOMEM;
 	}
+	else
+	  {
+	    __menuet__debug_out("curlstr is : ");
+	    __menuet__debug_out(curlstr);
+	     __menuet__debug_out("\n");
+	  }
 
 	retstr = strdup(curlstr);
 	curl_free(curlstr);

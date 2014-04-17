@@ -123,8 +123,9 @@ if (http_free == NULL)
     __menuet__debug_out("http_free() is NULL. Exiting.\n");
     kol_exit();
   }	
-http_process = ( __stdcall  int (*)(unsigned int)) 
+http_process = ( __stdcall  int (*)(unsigned int))
 		__kolibri__cofflib_getproc  (imp, "process");
+
 if (http_process == NULL)
   {
     __menuet__debug_out("http_process() is NULL. Exiting.\n");
@@ -139,8 +140,9 @@ if (http_find_header_field == NULL)
     kol_exit();
   }
 
-http_unescape_url = ( __stdcall char *(*)(char *))
+http_unescape_url = ( __stdcall  char *(*)(char *))
 		__kolibri__cofflib_getproc  (imp, "unescape");
+
 if(http_unescape_url == NULL)
   {
     __menuet__debug_out("http_unescape_url() is NULL. Exiting.\n");
