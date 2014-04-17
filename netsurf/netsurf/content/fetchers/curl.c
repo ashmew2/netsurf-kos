@@ -381,7 +381,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	/* 	code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
 	/* 				 &f->http_code); */
 	/* 	fetch_set_http_code(f->fetch_handle, f->http_code); */
-	/* 	assert(code == CURLE_OK); */
+	/* 	assert(code == CURL_OK); */
 	/* } */
 
 	http_code = http_ahoy->status;
@@ -398,7 +398,8 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	/* handle HTTP redirects (3xx response codes) */
 	if (300 <= http_code && http_code < 400 && header_location_field != NULL) {
 	  LOG(("FETCH_REDIRECT, '%s'", header_location_field));
-	  DEBUGGER("Found 300-400 in func()\n"); 		msg.type = FETCH_REDIRECT;
+	  DEBUGGER("Found 300-400 in func()\n");
+ 		msg.type = FETCH_REDIRECT;
 		msg.data.redirect = header_location_field;
 		fetch_send_callback(&msg, ctx->fetchh);
 		return true;
@@ -449,87 +450,87 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 		__menuet__debug_out("http_get() failed. [ Return Value 0 ]\n");
 	else
 		__menuet__debug_out("http_get() Succeeded!. [ Return Value Non zero ]\n");
-
-    __menuet__debug_out("HTTP GOT!\n");
-    int result = 1337;
-    char result_str[12];
-    char wererat_str[13];
-
-    http_ahoy = wererat;
-
-    sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
-    __menuet__debug_out(str);
-
-    __menuet__debug_out("Going into the do while loop for http_process\n");
-        
-    do  
-      result = http_process(wererat);
-    while (result != 0);
-    
-    /* switch(http_ahoy->status) */
-    /*   {	 */
-    /* 	char s[100]; */
-    /* 	char *p = NULL; */
-    /* 	int redirections = 0; */
-
-    /*   case 302: */
-    /* 	for(redirections = 0; redirections < MAX_REDIRECTIONS_ALLOWED; redirections++) */
-    /* 	  { */
-    /* 	    __menuet__debug_out("Start of redirections loop\n");	     */
-    /* 	    p = NULL; */
-    /* 	    p = return_null_terminated_string(s, http_find_header_field(http_ahoy, "location")); */
-
-    /* 	    if(!p)  */
-    /* 	      { */
-    /* 		__menuet__debug_out("Inside redirecting loop, http_find_header_field() returned NULL!\n");	      	       */
-    /* 		break;	       */
-    /* 	      } */
-
-    /* 	    __menuet__debug_out(s); */
-    /* 	    __menuet__debug_out("\n"); */
-	    
-    /* 	    wererat = http_get(s, NULL); */
-    /* 	    http_ahoy = wererat; */
-	    
-    /* 	    if(!wererat) */
-    /* 	      { */
-    /* 		__menuet__debug_out("Inside redirecting loop, wererat is zero!\n");	       */
-    /* 		break;	       */
-    /* 	      } */
-	    
-    /* 	    do   */
-    /* 	      result = http_process(wererat); */
-    /* 	    while (result != 0);	    	     */
-
-    /* 	    if(http_ahoy->status != 302)	       */
-    /* 	      break; */
-	      
-    /* 	    __menuet__debug_out("End of redirections loop\n"); */
-    /* 	  } */
-    /* 	ctx->path = s; */
-    /* 	break; */
 	
-    /*   default: */
-    /* 	__menuet__debug_out("Status is NOT 302 \n"); */
-    /* 	break; */
-    /*   } */
-
-    __menuet__debug_out("After the do while loop for http_process.\n");
-    
-/*    if(result == 0)
-      __menuet__debug_out("http_process() worked successfully!\n");
-    else
-      __menuet__debug_out("http_process() failed!\n");
-*/
-
-//    http_ahoy = wererat;		// really needed again??
-      sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
-    __menuet__debug_out(str);
-  
-/* fetch is going to be successful */
-
+	__menuet__debug_out("HTTP GOT!\n");
+	int result = 1337;
+	char result_str[12];
+	char wererat_str[13];
+	
+	http_ahoy = wererat;
+	
+	sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
+	__menuet__debug_out(str);
+	
+	__menuet__debug_out("Going into the do while loop for http_process\n");
+        
+	do  
+	  result = http_process(wererat);
+	while (result != 0);
+	
+	/* switch(http_ahoy->status) */
+	/*   {	 */
+	/* 	char s[100]; */
+	/* 	char *p = NULL; */
+	/* 	int redirections = 0; */
+	
+	/*   case 302: */
+	/* 	for(redirections = 0; redirections < MAX_REDIRECTIONS_ALLOWED; redirections++) */
+	/* 	  { */
+	/* 	    __menuet__debug_out("Start of redirections loop\n");	     */
+	/* 	    p = NULL; */
+	/* 	    p = return_null_terminated_string(s, http_find_header_field(http_ahoy, "location")); */
+	
+	/* 	    if(!p)  */
+	/* 	      { */
+	/* 		__menuet__debug_out("Inside redirecting loop, http_find_header_field() returned NULL!\n");	      	       */
+	/* 		break;	       */
+	/* 	      } */
+	
+	/* 	    __menuet__debug_out(s); */
+	/* 	    __menuet__debug_out("\n"); */
+	
+	/* 	    wererat = http_get(s, NULL); */
+	/* 	    http_ahoy = wererat; */
+	
+	/* 	    if(!wererat) */
+	/* 	      { */
+	/* 		__menuet__debug_out("Inside redirecting loop, wererat is zero!\n");	       */
+	/* 		break;	       */
+	/* 	      } */
+	
+	/* 	    do   */
+	/* 	      result = http_process(wererat); */
+	/* 	    while (result != 0);	    	     */
+	
+	/* 	    if(http_ahoy->status != 302)	       */
+	/* 	      break; */
+	
+	/* 	    __menuet__debug_out("End of redirections loop\n"); */
+	/* 	  } */
+	/* 	ctx->path = s; */
+	/* 	break; */
+	
+	/*   default: */
+	/* 	__menuet__debug_out("Status is NOT 302 \n"); */
+	/* 	break; */
+	/*   } */
+	
+	__menuet__debug_out("After the do while loop for http_process.\n");
+	
+	/*    if(result == 0)
+	      __menuet__debug_out("http_process() worked successfully!\n");
+	      else
+	      __menuet__debug_out("http_process() failed!\n");
+	*/
+	
+	//    http_ahoy = wererat;		// really needed again??
+	sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
+	__menuet__debug_out(str);
+	
+	/* fetch is going to be successful */
+	
 	fetch_set_http_code(ctx->fetchh, http_ahoy->status);		
-
+	
 	/* Any callback can result in the fetch being aborted.
 	 * Therefore, we _must_ check for this after _every_ call to
 	 * fetch_file_send_callback().
