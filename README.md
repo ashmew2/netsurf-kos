@@ -93,5 +93,6 @@ Built the following libraries with MENUETLIBC :
 Some work has been carried out on getting libhttp working with this (thanks to 
 hidnplayr!).
 
-The address bar doesn't react to mouse/keyboard events yet.
+The Netsurf window now reacts to keyboard and mouse events.
+Current focus is on getting redirects to work so that things like Google Search start working.
 ------------------------------------------------------------
