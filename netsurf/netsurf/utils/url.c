@@ -796,7 +796,8 @@ url_func_result url_unescape(const char *str, char **result)
 	__menuet__debug_out("\n");
 
 	//curlstr = curl_unescape(str, 0);
-	curlstr = http_unescape_url(str);
+	__menuet__debug_out("Calling http_unescape_url() : ");
+	curlstr = (char *)http_unescape_url(str);
 
 	if (curlstr == NULL) {
 	  __menuet__debug_out("curlstr is NULL!\n");	
@@ -806,7 +807,7 @@ url_func_result url_unescape(const char *str, char **result)
 	  {
 	    __menuet__debug_out("curlstr is : ");
 	    __menuet__debug_out(curlstr);
-	     __menuet__debug_out("\n");
+	    __menuet__debug_out("\n");
 	  }
 
 	retstr = strdup(curlstr);
