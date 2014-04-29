@@ -7,8 +7,6 @@ extern int mem_Free();
 extern int mem_Alloc();
 extern int mem_ReAlloc();
 
-
-
 int kol_exit(){
 	__menuet__sys_exit();
 }
@@ -95,7 +93,7 @@ char *return_null_terminated_string(char *dest, char *src)
 
 void HTTP_INIT()
 {
-IMP_ENTRY *imp;
+const IMP_ENTRY *imp;
 
 imp = __kolibri__cofflib_load("/sys/lib/http.obj");
 if (imp == NULL)
@@ -109,7 +107,7 @@ if (http_init == NULL)
   kol_exit();
   }
 
-http_get = ( __stdcall  unsigned int (*)(char*)) 
+ http_get = ( __stdcall  unsigned int (*)(char*, char*)) 
 		__kolibri__cofflib_getproc  (imp, "get");
 if (http_get == NULL)
   {
@@ -132,7 +130,7 @@ if (http_process == NULL)
     kol_exit();
   }
 
-http_find_header_field = ( __stdcall  char *(*)(struct http_msg*, char *)) 
+ http_find_header_field = ( __stdcall  char *(*)(char *, struct http_msg*)) 
 		__kolibri__cofflib_getproc  (imp, "find_header_field");
 if (http_find_header_field == NULL)
   {
@@ -153,5 +151,4 @@ __menuet__debug_out("HTTP init...\n");
 HTTP_YAY();
 
 __menuet__debug_out("ok...\n");
-
 }

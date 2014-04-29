@@ -372,7 +372,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	long error_code;
 	fetch_msg msg;
 	char *header_location_field = (char *)malloc(200);
-	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field(http_ahoy, "location"));
+	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field("location", http_ahoy));
 
 	/* f->had_headers = true; */
 
@@ -455,7 +455,7 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	char result_str[12];
 	char wererat_str[13];
 	
-	http_ahoy = wererat;
+	http_ahoy = (struct http_msg *)wererat;
 	
 	sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
 	__menuet__debug_out(str);	
@@ -501,10 +501,6 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 
 	__menuet__debug_out("Content : ");
 	__menuet__debug_out(http_ahoy->content_ptr);
-	__menuet__debug_out("\n");
-
-	__menuet__debug_out("Header : ");
-	__menuet__debug_out(http_ahoy->header);
 	__menuet__debug_out("\n");
 
 	__menuet__debug_out("Calling http_free with wererat = ");
