@@ -1,0 +1,3 @@
+Improve overall documentation
+Possibly improve README for installation
+
