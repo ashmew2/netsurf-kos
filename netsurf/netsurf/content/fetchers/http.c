@@ -12,7 +12,7 @@ int kol_exit(){
 }
 
 struct http_msg {
-// internal used by library, dont mess with them.
+// internal used by library, don't mess with them.
 unsigned int socket;
 unsigned int flags;
 unsigned int write_ptr;
@@ -26,19 +26,16 @@ unsigned int header_length;
 char *content_ptr;
 unsigned int content_length;
 unsigned int content_received;
-char header; //unknown size (actually, it's size is defined in header_length)
+char header[header_length]; 
 };
 
 
 int (* __stdcall http_init)();
-// On the next line, we should tell the C compiler that this procedure actually returns a pointer. (to the http_msg struct)
-
-unsigned int (* __stdcall http_get) (char * url, char * add_head); //yay, it's NOT uint, but hey, C is stubborn, and I'm dumb
-
+struct http_msg* (* __stdcall http_get) (char * url, char * add_head);
 int (* __stdcall http_process) (unsigned int identifier);
 void (* __stdcall http_free) (unsigned int identifier);
-char * (* __stdcall http_find_header_field) (struct http_msg *http_ahoy, char *field_name); //This is crazzzzzzyyyyyy
-unsigned int (* __stdcall http_unescape_url) (char *url_asciiz);
+char * (* __stdcall http_find_header_field) (char *field_name, struct http_msg *http_ahoy);
+char * (* __stdcall http_unescape_url) (char *url_asciiz);
 
 int HTTP_YAY(){
 	asm volatile ("pusha\n\
