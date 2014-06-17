@@ -374,7 +374,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	char *header_location_field = (char *)malloc(200);
 	char result_str[12];
 	
-	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field("location", http_ahoy->content_ptr));
+	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field("location", http_ahoy));
 	
 	/* f->had_headers = true; */
 
