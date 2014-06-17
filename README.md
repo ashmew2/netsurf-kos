@@ -94,5 +94,7 @@ Some work has been carried out on getting libhttp working with this (thanks to
 hidnplayr!).
 
 The Netsurf window now reacts to keyboard and mouse events.
-Current focus is on getting redirects to work so that things like Google Search start working.
+
+Current status : GET seems to work properly. POST needs some work and needs to be linked with the C code using http.obj ASM library. Also, since we don't have a port for libcurl on KolibriOS, libcurl and Netsurf code need to be decoupled.
+
 ------------------------------------------------------------
