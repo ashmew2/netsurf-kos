@@ -372,11 +372,13 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	long error_code;
 	fetch_msg msg;
 	char *header_location_field = (char *)malloc(200);
-	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field("location", http_ahoy));
-
+	char result_str[12];
+	
+	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field("location", http_ahoy->content_ptr));
+	
 	/* f->had_headers = true; */
 
-	/* if (!f->http_code)nn */
+	/* if (!f->http_code) */
 	/* { */
 	/* 	code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
 	/* 				 &f->http_code); */
@@ -385,17 +387,30 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	/* } */
 
 	http_code = http_ahoy->status;
-	LOG(("HTTP status code %li", http_code));
+	sprintf(result_str, "%u", http_ahoy->status);
+
+	__menuet__debug_out("Process headers : header_location_field : ");
+	__menuet__debug_out(header_location_field);
+	__menuet__debug_out(", OR : WITH F() : ");
+	__menuet__debug_out(http_find_header_field("location", http_ahoy->content_ptr));
+	__menuet__debug_out("\n");
+	__menuet__debug_out("Process_headers : http_code = ");
+	__menuet__debug_out(result_str);
+	__menuet__debug_out("\n");
 	
 	if (http_code == 304) /* && !f->post_urlenc && !f->post_multipart) */ {
 		/* Not Modified && GET request */
-	  DBG("Found 304 in func()\n"); 
+	  DBG("Found 304 in func()\n");
 	  msg.type = FETCH_NOTMODIFIED;
 		fetch_send_callback(&msg, ctx->fetchh);
 		return true;
 	}
 
 	/* handle HTTP redirects (3xx response codes) */
+
+	if(header_location_field == NULL)
+	  __menuet__debug_out("header_location_field is NULL...Something WRONG\n");
+
 	if (300 <= http_code && http_code < 400 && header_location_field != NULL) {
 	  LOG(("FETCH_REDIRECT, '%s'", header_location_field));
 	  DBG("Found 300-400 in func()\n");
@@ -471,20 +486,27 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	  result = http_process(wererat);
 	while (result != 0);
 	
-	sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
+	sprintf (str, "curl.c : Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
 	__menuet__debug_out(str);
 	
 	/* fetch is going to be successful */
 	
 	fetch_set_http_code(ctx->fetchh, http_ahoy->status);		
+
+
 	
 	/* Any callback can result in the fetch being aborted.
 	 * Therefore, we _must_ check for this after _every_ call to
 	 * fetch_file_send_callback().
 	 */
+
+	__menuet__debug_out("STATUS v2XS: ");
+	sprintf(result_str, "%u", http_ahoy->status);
+	__menuet__debug_out(result_str);
+	__menuet__debug_out("\n");
+
 	__menuet__debug_out("Calling fetch_curl_process_headers\n");
 	fetch_curl_process_headers(ctx, http_ahoy);
-
 
 	if (fetch_curl_send_header(ctx, "Content-Type: %s",
 			fetch_filetype(ctx->path)))
@@ -492,19 +514,14 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 
 
 	/* main data loop */
-	__menuet__debug_out("inside main data loop\n");
-		msg.type = FETCH_DATA;
+	__menuet__debug_out("Starting of main data loop\n");
 
-		msg.data.header_or_data.buf = http_ahoy->content_ptr; 	// lets pray this works..x2
+	msg.type = FETCH_DATA;
+	msg.data.header_or_data.buf = http_ahoy->content_ptr; 	// lets pray this works..x2	
+	msg.data.header_or_data.len = http_ahoy->content_received;
 
-		msg.data.header_or_data.len = http_ahoy->content_received;
 	__menuet__debug_out("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
-
-	__menuet__debug_out("STATUS : ");
-	sprintf(result_str, "%u", http_ahoy->status);
-	__menuet__debug_out(result_str);
-	__menuet__debug_out("\n");
 
 	__menuet__debug_out("Content : ");
 	__menuet__debug_out(http_ahoy->content_ptr);
@@ -515,9 +532,9 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	__menuet__debug_out(wererat_str);
 	__menuet__debug_out("\n");
 	
-	http_free(wererat);			
+	http_free(wererat);		
 	wererat = 0;
-
+	
 	if (ctx->aborted == false) {
 	__menuet__debug_out("ctx->aborted = false\n");
 		msg.type = FETCH_FINISHED;
