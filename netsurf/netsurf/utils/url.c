@@ -31,6 +31,7 @@
 #include <unistd.h>
 
 #include "curl/curl.h"
+//#include "content/fetchers/http.c"
 #include "utils/config.h"
 #include "utils/log.h"
 #include "utils/url.h"
@@ -789,24 +790,28 @@ url_func_result url_unescape(const char *str, char **result)
 	char *retstr;
 	char *address;	
 	
+	extern http_unescape_url();
 	__menuet__debug_out("Inside url_unescape()\n");
-	__menuet__debug_out("Address of url_unescape() : ");
-	sprintf(address, "%u", &url_unescape);
+	__menuet__debug_out("Address of () http_unescape_url : ");
+	
+	//	sprintf(address, "%x", http_unescape_url);
 	__menuet__debug_out(address);
 	__menuet__debug_out("\n");
 
-	//curlstr = curl_unescape(str, 0);
-	__menuet__debug_out("Calling http_unescape_url() : ");
-	curlstr = (char *)http_unescape_url(str);
+	__menuet__debug_out("Calling http_unescape_url() : \n");
+	curlstr = curl2_unescape(str, 0);
+	//curlstr = (char *)http_unescape_url(str);
+	__menuet__debug_out("Did not crash! \n");
 
 	if (curlstr == NULL) {
 	  __menuet__debug_out("curlstr is NULL!\n");	
 	  return URL_FUNC_NOMEM;
 	}
 	else
-	  {
+	  { //Cheap hack for now sprintf
 	    __menuet__debug_out("curlstr is : ");
-	    __menuet__debug_out(curlstr);
+	    sprintf(address, "%x", curlstr);
+	    __menuet__debug_out(address);
 	    __menuet__debug_out("\n");
 	  }
 
