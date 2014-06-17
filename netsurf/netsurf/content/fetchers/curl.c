@@ -365,8 +365,8 @@ fetch_file_process_error_aborted:
  *
  * Return true if the fetch is being aborted.
  */
-
 bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg *http_ahoy)
+
 {
 	long http_code;
 	long error_code;
@@ -374,7 +374,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	char *header_location_field = (char *)malloc(200);
 	char result_str[12];
 	
-	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field("location", http_ahoy));
+	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field(http_ahoy, "location"));
 	
 	/* f->had_headers = true; */
 
@@ -392,7 +392,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	__menuet__debug_out("Process headers : header_location_field : ");
 	__menuet__debug_out(header_location_field);
 	__menuet__debug_out(", OR : WITH F() : ");
-	__menuet__debug_out(http_find_header_field("location", http_ahoy->content_ptr));
+	__menuet__debug_out(http_find_header_field(http_ahoy, "location"));
 	__menuet__debug_out("\n");
 	__menuet__debug_out("Process_headers : http_code = ");
 	__menuet__debug_out(result_str);
