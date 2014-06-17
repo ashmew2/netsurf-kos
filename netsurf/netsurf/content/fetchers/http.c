@@ -12,7 +12,7 @@ int kol_exit(){
 }
 
 struct http_msg {
-// internal used by library, dont mess with these.
+// internal used by library, dont mess with them.
 unsigned int socket;
 unsigned int flags;
 unsigned int write_ptr;
@@ -32,11 +32,13 @@ char header; //unknown size (actually, it's size is defined in header_length)
 
 int (* __stdcall http_init)();
 // On the next line, we should tell the C compiler that this procedure actually returns a pointer. (to the http_msg struct)
+
 unsigned int (* __stdcall http_get) (char * url, char * add_head); //yay, it's NOT uint, but hey, C is stubborn, and I'm dumb
+
 int (* __stdcall http_process) (unsigned int identifier);
 void (* __stdcall http_free) (unsigned int identifier);
 char * (* __stdcall http_find_header_field) (char *field_name, struct http_msg *http_ahoy); //This is crazzzzzzyyyyyy
-char * (* __stdcall http_unescape_url) (char *url_asciiz);
+unsigned int (* __stdcall http_unescape_url) (char *url_asciiz);
 
 int HTTP_YAY(){
 	asm volatile ("pusha\n\
@@ -130,7 +132,7 @@ if (http_process == NULL)
     kol_exit();
   }
 
- http_find_header_field = ( __stdcall  char *(*)(char *, struct http_msg*)) 
+http_find_header_field = ( __stdcall  char *(*)(char *, struct http_msg*)) 
 		__kolibri__cofflib_getproc  (imp, "find_header_field");
 if (http_find_header_field == NULL)
   {
@@ -138,7 +140,7 @@ if (http_find_header_field == NULL)
     kol_exit();
   }
 
-http_unescape_url = ( __stdcall  char *(*)(char *))
+http_unescape_url = ( __stdcall  unsigned int (*)(char *))
 		__kolibri__cofflib_getproc  (imp, "unescape");
 
 if(http_unescape_url == NULL)

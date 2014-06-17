@@ -1,13 +1,13 @@
 #include <curl/curl.h>
 #include <menuet/os.h>
-
+/*
 char *curl_unescape( char * url , int length ) {
 	
 	__menuet__debug_out("CURL:unescape\n");
 	return url;
 	
 }
-
+*/
 void curl_free( char * ptr ){
 	__menuet__debug_out("CURL:free?\n");
 }

@@ -428,6 +428,13 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	return false;
 }
 
+char *curl2_unescape( char * url , int length ) {
+	
+	__menuet__debug_out("CURL:unescape inside content--fetchers\n");
+	return http_unescape_url(url);
+}
+
+
 static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	char ps[96], str[128];
 	sprintf(ps, "Yay! Path is %s\n", ctx->path);
