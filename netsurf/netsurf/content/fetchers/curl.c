@@ -337,7 +337,7 @@ static void fetch_curl_process_error(struct fetch_curl_context *ctx, int code)
 
 	/* content type */
 	if (fetch_curl_send_header(ctx, "Content-Type: text/html"))
-		goto fetch_file_process_error_aborted;
+	  return;
 
 	snprintf(key, sizeof key, "HTTP%03d", code);
 	title = messages_get(key);
@@ -351,12 +351,11 @@ static void fetch_curl_process_error(struct fetch_curl_context *ctx, int code)
 	msg.data.header_or_data.buf = (const uint8_t *) buffer;
 	msg.data.header_or_data.len = strlen(buffer);
 	if (fetch_curl_send_callback(&msg, ctx))
-		goto fetch_file_process_error_aborted;
+	  return;
 
 	msg.type = FETCH_FINISHED;
 	fetch_curl_send_callback(&msg, ctx);
 
-fetch_file_process_error_aborted:
 	return;
 }
 
@@ -453,7 +452,7 @@ char *curl2_unescape( char * url , int length ) {
 
 static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	char ps[96], str[128];
-	sprintf(ps, "Yay! Path is %s\n", ctx->path);
+	sprintf(ps, "Yay! Path is %s\n", ctx->path); /*TODO : Remove these notify calls soon. Floods screen otherwise*/
 	execl ("/sys/@notify", ps, 0);
 	
 	__menuet__debug_out(ps);
@@ -511,8 +510,11 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 
 	if (fetch_curl_send_header(ctx, "Content-Type: %s",
 			fetch_filetype(ctx->path)))
-		goto fetch_file_process_aborted;
-
+	  {
+	__menuet__debug_out("Inside fetch file_process_aborted label\n");
+	return;
+	/* goto fetch_file_process_aborted; */
+	  }
 
 	/* main data loop */
 	__menuet__debug_out("Starting of main data loop\n");
@@ -524,9 +526,9 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	__menuet__debug_out("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
 
-	__menuet__debug_out("Content : ");
-	__menuet__debug_out(http_ahoy->content_ptr);
-	__menuet__debug_out("\n");
+	/* __menuet__debug_out("Content : "); */
+	/* __menuet__debug_out(http_ahoy->content_ptr); */
+	/* __menuet__debug_out("\n"); */
 
 	__menuet__debug_out("Calling http_free with wererat = ");
 	sprintf(wererat_str, "%u", wererat);
