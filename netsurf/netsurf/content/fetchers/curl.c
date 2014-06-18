@@ -374,7 +374,7 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	char *header_location_field = (char *)malloc(200);
 	char result_str[12];
 	
-	header_location_field = return_null_terminated_string(header_location_field, http_find_header_field(http_ahoy, "location"));
+	//header_location_field = return_null_terminated_string(header_location_field, http_find_header_field(http_ahoy, "location"));
 	
 	/* f->had_headers = true; */
 
@@ -387,20 +387,17 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	/* } */
 
 	http_code = http_ahoy->status;
-	sprintf(result_str, "%u", http_ahoy->status);
 
-	__menuet__debug_out("Process headers : header_location_field : ");
-	__menuet__debug_out(header_location_field);
-	__menuet__debug_out(", OR : WITH F() : ");
-	__menuet__debug_out(http_find_header_field(http_ahoy, "location"));
-	__menuet__debug_out("\n");
+	/*Print out http_code*/
+	sprintf(result_str, "%u", http_ahoy->status);
 	__menuet__debug_out("Process_headers : http_code = ");
 	__menuet__debug_out(result_str);
 	__menuet__debug_out("\n");
-	
+	/*                   */
+
 	if (http_code == 304) /* && !f->post_urlenc && !f->post_multipart) */ {
 		/* Not Modified && GET request */
-	  DBG("Found 304 in func()\n");
+	  DBG("FETCH_NOTMODIFIED\n");
 	  msg.type = FETCH_NOTMODIFIED;
 		fetch_send_callback(&msg, ctx->fetchh);
 		return true;
@@ -408,30 +405,34 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 
 	/* handle HTTP redirects (3xx response codes) */
 
-	if(header_location_field == NULL)
-	  __menuet__debug_out("header_location_field is NULL...Something WRONG\n");
+	if (300 <= http_code && http_code < 400) {
+                header_location_field = 
+                          return_null_terminated_string(header_location_field, 
+                                                        http_find_header_field(http_ahoy, "location"));
+		if(!header_location_field)
+		  DBG("Found a 3xx, but location field is NULL. Error.\n");
 
-	if (300 <= http_code && http_code < 400 && header_location_field != NULL) {
-	  LOG(("FETCH_REDIRECT, '%s'", header_location_field));
-	  DBG("Found 300-400 in func()\n");
- 		msg.type = FETCH_REDIRECT;
+	        DBG("FETCH_REDIRECT\n");
+		msg.type = FETCH_REDIRECT;
 		msg.data.redirect = header_location_field;
 		fetch_send_callback(&msg, ctx->fetchh);
 		return true;
 	}
 
-	/* /\* handle HTTP 401 (Authentication errors) *\/ */
-	/* if (http_code == 401) { */
-	/* 	msg.type = FETCH_AUTH; */
-	/* 	msg.data.auth.realm = f->realm; */
-	/* 	fetch_send_callback(&msg, ctx->fetchh); */
-	/* 	return true; */
-	/* } */
+	/* handle HTTP 401 (Authentication errors) */
+	if (http_code == 401) {
+ 	        DBG("FETCH_AUTH\n");	
+		msg.type = FETCH_AUTH;
+		/* TODO : FIX this line. We don't have a realm field in context right now*/
+		//		msg.data.auth.realm = f->realm;
+		fetch_send_callback(&msg, ctx->fetchh);
+		return true;
+	}
 
 	/* handle HTTP errors (non 2xx response codes) */
 	if (http_code < 200 || 299 < http_code) {
+		DBG("FETCH_ERROR\n"); 
 		msg.type = FETCH_ERROR;
-		DBG("Found non 2xx in func()\n"); 
 		msg.data.error = messages_get("Not2xx");
 		fetch_send_callback(&msg, ctx->fetchh);
 		return true;
