@@ -59,7 +59,7 @@
 #undef DBG
 #endif
 //#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
-#define DBG(s) LOG(s)            /* So that we see debug in Netsurf's LOG files */
+#define DBG(s) LOG((s))            /* So that we see debug in Netsurf's LOG files */
 
 bool fetch_active;	/**< Fetches in progress, please call fetch_poll(). */
 
