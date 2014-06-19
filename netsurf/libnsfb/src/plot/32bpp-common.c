@@ -30,7 +30,7 @@ static bool fill(nsfb_t *nsfb, nsfb_bbox_t *rect, nsfb_colour_t c)
 
         pvid = get_xy_loc(nsfb, rect->x0, rect->y0);
 
-	__menuet__debug_out("nsfb fill:loooop\n");
+	//	__menuet__debug_out("nsfb fill:loooop\n");
         while (height-- > 0) {
                 w = width;
                 while (w >= 16) {
@@ -56,7 +56,7 @@ static bool fill(nsfb_t *nsfb, nsfb_bbox_t *rect, nsfb_colour_t c)
                 pvid += llen;
         }
 
-	__menuet__debug_out("nsfb fill:finish\n");
+	//	__menuet__debug_out("nsfb fill:finish\n");
         return true;
 }
 
