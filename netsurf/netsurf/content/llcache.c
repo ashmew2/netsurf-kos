@@ -37,6 +37,13 @@
 /** Define to enable tracing of llcache operations. */
 #undef LLCACHE_TRACE
 
+#ifdef DBG
+#undef DBG
+#endif
+//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+#define DBG(s) LOG(s)            /* So that we see debug in Netsurf's LOG files */
+
+
 /** State of a low-level cache object fetch */
 typedef enum {
 	LLCACHE_FETCH_INIT,		/**< Initial state, before fetch */
@@ -1623,7 +1630,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	nserror error = NSERROR_OK;
 	llcache_object *object = p;
 	llcache_event event;
-	__menuet__debug_out("Inside llcache_fetch_callback\n");
+	DBG("Inside llcache_fetch_callback\n");
 
 #ifdef LLCACHE_TRACE
 	LOG(("Fetch event %d for %p", msg->type, object));
@@ -1799,10 +1806,10 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 
 			object->fetch.state = LLCACHE_FETCH_COMPLETE;
 		}
-		__menuet__debug_out("Returning from llcache_fetch_callback. (err != NS_OK)\n");
+		DBG("Returning from llcache_fetch_callback. (err != NS_OK)\n");
 		return;
 	}
-	__menuet__debug_out("Returning from llcache_fetch_callback.(err = NS_OK)\n");
+	DBG("Returning from llcache_fetch_callback.(err = NS_OK)\n");
 }
 
 /**

@@ -10,8 +10,11 @@
 #include "surface.h"
 //#include "../src/surface/sdl.c"
 
-
-
+#ifdef DBG
+#undef DBG
+#endif
+//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+#define DBG(s) LOG(s)            /* So that we see debug in Netsurf's LOG files */
 
 #define UNUSED(x) ((x) = (x))
 
@@ -23,7 +26,7 @@ extern nsfb_surface_rtns_t sdl_rtns;
 	
 	_nsfb_register_surface(NSFB_SURFACE_SDL, &sdl_rtns, "sdl");
 	
-	__menuet__debug_out("Starting bezier\n");
+	DBG("Starting bezier\n");
 	freopen("stderr","w",stderr);
 	
 	freopen("stdout","w",stdout);
@@ -51,20 +54,20 @@ extern nsfb_surface_rtns_t sdl_rtns;
 
     fetype = nsfb_type_from_name(fename);
     if (fetype == NSFB_SURFACE_NONE) {
-    __menuet__debug_out("Can't convert\n");
+    DBG("Can't convert\n");
         fprintf(stderr, "Unable to convert \"%s\" to nsfb surface type\n", fename);
         return 1;
     }
 
     nsfb = nsfb_new(fetype);
     if (nsfb == NULL) {
-		__menuet__debug_out("Can't allocate\n");
+		DBG("Can't allocate\n");
         fprintf(stderr, "Unable to allocate \"%s\" nsfb surface\n", fename);
         return 2;
     }
 
     if (nsfb_init(nsfb) == -1) {
-		__menuet__debug_out("Init failed\n");
+		DBG("Init failed\n");
         fprintf(stderr, "Unable to initialise nsfb surface\n");
         nsfb_free(nsfb);
         return 4;

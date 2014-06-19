@@ -18,6 +18,12 @@
 
 #define UNUSED(x) ((x) = (x))
 
+#ifdef DBG
+#undef DBG
+#endif
+//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+#define DBG(s) LOG(s)            /* So that we see debug in Netsurf's LOG files */
+
 extern const struct {
     unsigned int  width;
     unsigned int  height;
@@ -67,7 +73,7 @@ int main(int argc, char **argv)
     int fbstride;
     const char *dumpfile = NULL;
 
-	__menuet__debug_out("Init..\n");
+	DBG("Init..\n");
 
     if (argc < 2) {
         fename="sdl";
@@ -96,15 +102,15 @@ int main(int argc, char **argv)
         return 4;
     }
 
-	__menuet__debug_out("New ram surface...\n");
+	DBG("New ram surface...\n");
 
     bmp = nsfb_new(NSFB_SURFACE_RAM);
     
       if (bmp == NULL) {
-       __menuet__debug_out("No ram surface :D ..\n");
+       DBG("No ram surface :D ..\n");
        return 5;
     }
-    __menuet__debug_out("Oh shit :D ..\n");
+    DBG("Oh shit :D ..\n");
     nsfb_set_geometry(bmp, nsglobe.width, nsglobe.height, NSFB_FMT_ABGR8888);
     nsfb_init(bmp);
     nsfb_get_buffer(bmp, &fbptr, &fbstride);

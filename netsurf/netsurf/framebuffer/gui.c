@@ -64,6 +64,12 @@
 
 #define NSFB_TOOLBAR_DEFAULT_LAYOUT "blfsrut"
 
+#ifdef DBG
+#undef DBG
+#endif
+//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+#define DBG(s) LOG(s)            /* So that we see debug in Netsurf's LOG files */
+
 fbtk_widget_t *fbtk;
 
 struct gui_window *input_window = NULL;
@@ -546,17 +552,17 @@ main(int argc, char** argv)
 	z=0x20;
 	strcpy(p, *z);
 	
-	__menuet__debug_out("PATH1...\n");
-	__menuet__debug_out(p);
-	__menuet__debug_out("PATH1...\n");
+	DBG("PATH1...\n");
+	DBG(p);
+	DBG("PATH1...\n");
 	
 	*(strrchr(p, '/')+1)='\0';
 	
 	strcpy(strrchr(p, '/')+1, "res/");
 	
-	__menuet__debug_out("PATH1...\n");
-	__menuet__debug_out(p);
-	__menuet__debug_out("PATH1...\n");
+	DBG("PATH1...\n");
+	DBG(p);
+	DBG("PATH1...\n");
 
 	asm volatile ("int $0x40"::"a"(30), "b"(1), "c"(p));
 	
@@ -579,9 +585,9 @@ main(int argc, char** argv)
 	options = filepath_find(respaths, "Choices");
 	messages = filepath_find(respaths, "messages");
 
-	__menuet__debug_out("===path to msg\n");
-	__menuet__debug_out(messages);
-	__menuet__debug_out("\n===path to msg\n");
+	DBG("===path to msg\n");
+	DBG(messages);
+	DBG("\n===path to msg\n");
 	
 	//netsurf_init(&argc, &argv, options, "res/messages");
 	netsurf_init(&argc, &argv, options, messages);

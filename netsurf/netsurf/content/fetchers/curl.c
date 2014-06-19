@@ -62,9 +62,13 @@
  */
 #include <desktop/browser.h>
 
-#define DBG(s) __menuet__debug_out(s)
-#define MAX_REDIRECTIONS_ALLOWED 5
+#ifdef DBG
+#undef DBG
+#endif
+//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+#define DBG(s) LOG(s)            /* So that we see debug in Netsurf's LOG files */
 
+#define MAX_REDIRECTIONS_ALLOWED 5
 /* uncomment this to use scheduler based calling
 #define FETCHER_CURLL_SCHEDULED 1
 */
@@ -252,11 +256,6 @@ LOG(("curl start\n"));
 	return true;
 }
 
-
-
-
-
-
 /**
  * Abort a fetch.
  */
@@ -271,7 +270,6 @@ void fetch_curl_abort(void *ctx)
 	 */
 	c->aborted = true;
 }
-
 
 /**
  * Free a fetch structure and associated resources.
@@ -290,14 +288,16 @@ static inline bool fetch_curl_send_callback(const fetch_msg *msg,
 		struct fetch_curl_context *ctx)
 {
 	ctx->locked = true;
-	__menuet__debug_out("Inside curl_send_cb, Calling send_cb()\n");
+	DBG("Inside fetch_curl_send_cb, Calling fetch_send_cb()\n");
 
 	fetch_send_callback(msg, ctx->fetchh);
 	ctx->locked = false;
-	__menuet__debug_out("Returning ctx->aborted.\n");
+	DBG("Returning from fetch_curl_send_cb.\n");
 
 	return ctx->aborted;
 }
+
+/* fetch_curl_send_header function returns true if aborted. => true is for FAIL */
 
 static bool fetch_curl_send_header(struct fetch_curl_context *ctx,
 		const char *fmt, ...)
@@ -305,23 +305,23 @@ static bool fetch_curl_send_header(struct fetch_curl_context *ctx,
 	fetch_msg msg;
 	char header[64];
 	va_list ap;
-	__menuet__debug_out("Inside fetch_curl_send_header\n");
+	DBG("Inside fetch_curl_send_header\n");
 	va_start(ap, fmt);
 
 	vsnprintf(header, sizeof header, fmt, ap);
 
 	va_end(ap);
-	__menuet__debug_out("Header is : ");
-	__menuet__debug_out(header);
+	DBG("Header is : ");
+	DBG(header);
 
 	msg.type = FETCH_HEADER;
 	msg.data.header_or_data.buf = (const uint8_t *) header;
 	msg.data.header_or_data.len = strlen(header);
-	__menuet__debug_out("\nCalling fetch_curl_send_callback\n");
+	DBG("\nCalling fetch_curl_send_callback\n");
 
 	fetch_curl_send_callback(&msg, ctx);
 
-	__menuet__debug_out("Returning ctx->aborted\n");
+	DBG("Returning from fetch_curl_send_header\n");
 	return ctx->aborted;
 }
 
@@ -389,9 +389,9 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 
 	/*Print out http_code*/
 	sprintf(result_str, "%u", http_ahoy->status);
-	__menuet__debug_out("Process_headers : http_code = ");
-	__menuet__debug_out(result_str);
-	__menuet__debug_out("\n");
+	DBG("Process_headers : http_code = ");
+	DBG(result_str);
+	DBG("\n");
 	/*                   */
 
 	if (http_code == 304) /* && !f->post_urlenc && !f->post_multipart) */ {
@@ -440,12 +440,13 @@ bool fetch_curl_process_headers(struct fetch_curl_context *ctx, struct http_msg 
 	if (ctx->aborted)
 		return true;
 
+	DBG("Returning from process headers function\n");
 	return false;
 }
 
 char *curl2_unescape( char * url , int length ) {
 	
-	__menuet__debug_out("CURL:unescape inside content--fetchers\n");
+	DBG("CURL:unescape inside content--fetchers\n");
 	return http_unescape_url(url);
 }
 
@@ -455,11 +456,11 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	sprintf(ps, "Yay! Path is %s\n", ctx->path); /*TODO : Remove these notify calls soon. Floods screen otherwise*/
 	execl ("/sys/@notify", ps, 0);
 	
-	__menuet__debug_out(ps);
+	DBG(ps);
 	
 	fetch_msg msg;
 
-	__menuet__debug_out("AHOY!\n");
+	DBG("AHOY!\n");
 	struct http_msg *http_ahoy;
 
 	unsigned int wererat = 0;
@@ -468,11 +469,15 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	wererat = http_get(pa, NULL);	// TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.
 
 	if(wererat == 0) /* Error condition : http_get returned 0 */
-		__menuet__debug_out("http_get() failed. [ Return Value 0 ]\n");
+	  {
+		DBG("http_get() failed. [ Return Value 0 ]\n");
+		ctx->aborted = true;
+		return;
+	  }
 	else
-		__menuet__debug_out("http_get() Succeeded!. [ Return Value Non zero ]\n");
+		DBG("http_get() Succeeded!. [ Return Value Non zero ]\n");
 	
-	__menuet__debug_out("HTTP GOT!\n");
+	DBG("HTTP GOT!\n");
 	int result = 1337;
 	char result_str[12];
 	char wererat_str[13];
@@ -480,14 +485,14 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	http_ahoy = (struct http_msg *)wererat;
 	
 	sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
-	__menuet__debug_out(str);	
+	DBG(str);	
         
 	do  
 	  result = http_process(wererat);
 	while (result != 0);
 	
-	sprintf (str, "curl.c : Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
-	__menuet__debug_out(str);
+	sprintf (str, "curl.c After http_process loop: Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
+	DBG(str);
 	
 	/* fetch is going to be successful */
 	
@@ -500,54 +505,54 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	 * fetch_file_send_callback().
 	 */
 
-	__menuet__debug_out("STATUS v2XS: ");
+	DBG("STATUS CODE: ");
 	sprintf(result_str, "%u", http_ahoy->status);
-	__menuet__debug_out(result_str);
-	__menuet__debug_out("\n");
+	DBG(result_str);
+	DBG("\n");
 
-	__menuet__debug_out("Calling fetch_curl_process_headers\n");
+	DBG("Calling fetch_curl_process_headers\n");
 	fetch_curl_process_headers(ctx, http_ahoy);
 
 	if (fetch_curl_send_header(ctx, "Content-Type: %s",
 			fetch_filetype(ctx->path)))
 	  {
-	__menuet__debug_out("Inside fetch file_process_aborted label\n");
+	DBG("Inside fetch file_process_aborted label\n");
 	return;
 	/* goto fetch_file_process_aborted; */
 	  }
 
 	/* main data loop */
-	__menuet__debug_out("Starting of main data loop\n");
+	DBG("Starting of main data loop\n");
 
 	msg.type = FETCH_DATA;
 	msg.data.header_or_data.buf = http_ahoy->content_ptr; 	// lets pray this works..x2	
 	msg.data.header_or_data.len = http_ahoy->content_received;
 
-	__menuet__debug_out("Calling fetch_curl_send_callback\n");
+	DBG("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
 
-	/* __menuet__debug_out("Content : "); */
-	/* __menuet__debug_out(http_ahoy->content_ptr); */
-	/* __menuet__debug_out("\n"); */
+	/* DBG("Content : "); */
+	/* DBG(http_ahoy->content_ptr); */
+	/* DBG("\n"); */
 
-	__menuet__debug_out("Calling http_free with wererat = ");
+	DBG("Calling http_free with wererat = ");
 	sprintf(wererat_str, "%u", wererat);
-	__menuet__debug_out(wererat_str);
-	__menuet__debug_out("\n");
+	DBG(wererat_str);
+	DBG("\n");
 	
 	http_free(wererat);		
 	wererat = 0;
 	
 	if (ctx->aborted == false) {
-	__menuet__debug_out("ctx->aborted = false\n");
+	DBG("ctx->aborted = false\n");
 		msg.type = FETCH_FINISHED;
-	__menuet__debug_out("Calling fetch_curl_send_callback\n");
+	DBG("Calling fetch_curl_send_callback\n");
 		fetch_curl_send_callback(&msg, ctx);
-	__menuet__debug_out("After Calling fetch_curl_send_callback\n");
+	DBG("After Calling fetch_curl_send_callback\n");
 	}
 	
 fetch_file_process_aborted:
-	__menuet__debug_out("Inside fetch file_process_aborted label\n");
+	DBG("Inside fetch file_process_aborted label\n");
 return;
 
 }
@@ -583,15 +588,18 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 		/* Only process non-aborted fetches */
 		if (c->aborted == false) {
 			/* file fetches can be processed in one go */
+		  DBG("Calling fetch_curl_process()");
 			fetch_curl_process(c);
 		}
 
 		/* Compute next fetch item at the last possible moment as
 		 * processing this item may have added to the ring.
 		 */
+		DBG("Moving next to c->r_next\n");
 		next = c->r_next;
-
+		DBG("Calling fetch_remove_from_queue\n");
 		fetch_remove_from_queues(c->fetchh);
+		DBG("Calling fetch_free\n");
 		fetch_free(c->fetchh);
 
 		/* Advance to next ring entry, exiting if we've reached

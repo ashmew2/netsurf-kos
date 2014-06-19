@@ -35,23 +35,30 @@
 
 #include "widget.h"
 
+#ifdef DBG
+#undef DBG
+#endif
+//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+#define DBG(s) LOG(s)            /* So that we see debug in Netsurf's LOG files */
+
+
 static int
 fb_redraw_bitmap(fbtk_widget_t *widget, fbtk_callback_info *cbi)
 {
 	LOG(("REDRAW BITMAP"));
-	//__menuet__debug_out("REDRAW BITMAP");
+	//DBG("REDRAW BITMAP");
 	nsfb_bbox_t bbox;
 	nsfb_bbox_t rect;
 	nsfb_t *nsfb;
 
 	LOG(("REDRAW BITMAP 1 "));
-	//__menuet__debug_out("REDRAW BITMAP 1");
+	//DBG("REDRAW BITMAP 1");
 
 
 	nsfb = fbtk_get_nsfb(widget);
 
 	LOG(("REDRAW BITMAP 2"));
-	//__menuet__debug_out("REDRAW BITMAP 2");
+	//DBG("REDRAW BITMAP 2");
 
 
 	fbtk_get_bbox(widget, &bbox);
@@ -59,31 +66,31 @@ fb_redraw_bitmap(fbtk_widget_t *widget, fbtk_callback_info *cbi)
 	rect = bbox;
 
 	LOG(("REDRAW BITMAP 3 "));
-	//__menuet__debug_out("REDRAW BITMAP 3");
+	//DBG("REDRAW BITMAP 3");
 
 
 	nsfb_claim(nsfb, &bbox);
 
 	LOG(("REDRAW BITMAP 4"));
-	//__menuet__debug_out("REDRAW BITMAP 4");
+	//DBG("REDRAW BITMAP 4");
 
 	/* clear background */
 	if ((widget->bg & 0xFF000000) != 0) {
 		/* transparent polygon filling isnt working so fake it */
 		
 			LOG(("REDRAW BITMAP 5"));
-	//__menuet__debug_out("REDRAW BITMAP 5");
+	//DBG("REDRAW BITMAP 5");
 
 		nsfb_plot_rectangle_fill(nsfb, &bbox, widget->bg);
 	}
 
 	LOG(("REDRAW BITMAP 6"));
-	//__menuet__debug_out("REDRAW BITMAP 6\n");
+	//DBG("REDRAW BITMAP 6\n");
 
 	/* plot the image */
 	
 	LOG(("STUB: DON'T REAL DRAW"));
-	//__menuet__debug_out("STUB: DON'T REAL DRAW\n");
+	//DBG("STUB: DON'T REAL DRAW\n");
 	
 	
 	LOG(("pixdata is %x", (nsfb_colour_t *)widget->u.bitmap.bitmap->pixdata));
@@ -113,12 +120,12 @@ fb_redraw_bitmap(fbtk_widget_t *widget, fbtk_callback_info *cbi)
 	
 	
 	LOG(("REDRAW BITMAP 7"));
-	//__menuet__debug_out("REDRAW BITMAP 7\n");
+	//DBG("REDRAW BITMAP 7\n");
 
 	nsfb_update(nsfb, &bbox);
 
 	LOG(("REDRAW BITMAP OK\n"));
-	//__menuet__debug_out("REDRAW BITMAP OK\n");
+	//DBG("REDRAW BITMAP OK\n");
 
 	return 0;
 }
@@ -128,7 +135,7 @@ void
 fbtk_set_bitmap(fbtk_widget_t *widget, struct fbtk_bitmap *image)
 {
 	LOG(("SET BITMAP"));
-	//__menuet__debug_out("set BITMAP");
+	//DBG("set BITMAP");
 	if ((widget == NULL) || (widget->type != FB_WIDGET_TYPE_BITMAP))
 		return;
 
@@ -148,7 +155,7 @@ fbtk_create_bitmap(fbtk_widget_t *parent,
 		   struct fbtk_bitmap *image)
 {
 	LOG(("CREATE BITMAP"));
-	//__menuet__debug_out("cr BITMAP");
+	//DBG("cr BITMAP");
 	fbtk_widget_t *neww;
 
 	neww = fbtk_widget_new(parent, FB_WIDGET_TYPE_BITMAP, x, y, width, height);
@@ -177,7 +184,7 @@ fbtk_create_button(fbtk_widget_t *parent,
 	fbtk_widget_t *neww;
 
 	LOG(("CREATE BUTTON BITMAP"));
-	//__menuet__debug_out("cr bb BITMAP");
+	//DBG("cr bb BITMAP");
 	neww = fbtk_widget_new(parent, FB_WIDGET_TYPE_BITMAP, x, y, width, height);
 
 	neww->bg = c;
