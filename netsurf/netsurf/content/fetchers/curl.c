@@ -74,9 +74,12 @@
 */
 
 struct file_transfer {
-  struct file_transfer *next, *prev;
+  struct file_transfer *r_next, *r_prev;
   struct http_msg *http_wererat;
+  bool   aborted; 
 };
+
+static struct file_transfer *file_transfer_ring = NULL;
 
 struct fetch_curl_context {
 	struct fetch_curl_context *r_next, *r_prev;
@@ -93,7 +96,6 @@ struct fetch_curl_context {
 };
 
 static struct fetch_curl_context *ring = NULL;
-
 
 static bool fetch_curl_initialise(lwc_string *scheme); //here
 static void fetch_curl_finalise(lwc_string *scheme); //here
@@ -120,7 +122,6 @@ void fetch_curl_register(void)
 
 lwc_string *scheme;
 
-
 LOG(("curl register\n"));
 
 lwc_intern_string("http", SLEN("http"), &scheme);
@@ -139,27 +140,7 @@ lwc_intern_string("http", SLEN("http"), &scheme);
 #endif
 				fetch_curl_finalise)) {  //here
 			LOG(("Unable to register cURL fetcher for HTTP"));
-		}
-		
-		
-		lwc_intern_string("https", SLEN("https"), &scheme);
-
-	if (!fetch_add_fetcher(scheme,
-				fetch_curl_initialise,
-				fetch_curl_can_fetch,
-				fetch_curl_setup,
-				fetch_curl_start,
-				fetch_curl_abort,
-				fetch_curl_free,
-#ifdef FETCHER_CURLL_SCHEDULED
-				       NULL,
-#else
-				fetch_curl_poll,
-#endif
-				fetch_curl_finalise)) {
-			LOG(("Unable to register cURL fetcher for HTTPS"));
-		}
-
+	}
 }
 
 
@@ -330,7 +311,7 @@ static bool fetch_curl_send_header(struct fetch_curl_context *ctx,
 }
 
 static void fetch_curl_process_error(struct fetch_curl_context *ctx, int code)
-{
+{ 
 	fetch_msg msg;
 	char buffer[1024];
 	const char *title;
@@ -472,6 +453,10 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 
 	wererat = http_get(pa, NULL);	// TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.
 
+	/* Add to the transfers linked list*/
+
+	/* Check all the transfers in the linked list with http_process */
+
 	if(wererat == 0) /* Error condition : http_get returned 0 */
 	  {
 		DBG("http_get() failed. [ Return Value 0 ]\n");
@@ -501,8 +486,6 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	/* fetch is going to be successful */
 	
 	fetch_set_http_code(ctx->fetchh, http_ahoy->status);		
-
-
 	
 	/* Any callback can result in the fetch being aborted.
 	 * Therefore, we _must_ check for this after _every_ call to
@@ -573,11 +556,22 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 	LOG(("fetch_curl_poll function()\n"));
 	
 	struct fetch_curl_context *c, *next;
+	struct file_transfer      *ft, *new_ft, *ft_next;
+	unsigned int wererat = 0;
 
-	if (ring == NULL) return;
-
+	if (ring == NULL && file_transfer_ring == NULL) return;
+	
 	/* Iterate over ring, processing each pending fetch */
 	c = ring;
+	ft = file_transfer_ring;
+	new_ft = calloc(1, sizeof(struct file_transfer));
+
+	if(new_ft==NULL)
+	  {
+	    DBG("Problem with allocation for New_ft\n");
+	    //return here? No idea yet. TODO
+	  }
+
 	do {
 		/* Ignore fetches that have been flagged as locked.
 		 * This allows safe re-entrant calls to this function.
@@ -594,8 +588,40 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 		if (c->aborted == false) {
 			/* file fetches can be processed in one go */
 		        DBG("Calling fetch_curl_process()");
-			fetch_curl_process(c);
-		}
+			wererat = http_get(c->path, NULL); // TODO: a pointer to additional headers (for cookies etc) can be placed here in the future.		       
+			new_ft->http_wererat = wererat; 
+
+			if(wererat == 0)
+			  {
+			  new_ft->aborted = true; /*The transfer isn't possible since no socket could be opened*/
+			  c->aborted = true;
+			  DBG("http_get() failed. [ Return Value 0 ]\n");
+			  //What to do here? Return ? Or wait? TODO
+			  }
+
+			RING_INSERT(file_transfer_ring, new_ft);
+
+		/*Look at all pending transfers now and advance them all once and check for completion*/
+
+			ft = file_transfer_ring;
+			do {
+			  int result = 1337;
+
+			  if(ft->aborted)
+			    continue;
+
+			  result = http_process(ft->http_wererat);
+			  ft_next = ft->r_next;
+
+			  if(result == 0)
+			    {
+			      DBG("http_process finished (Returned 0, remove from ring)\n");			      
+			      RING_REMOVE(file_transfer_ring, ft); 
+			    }
+			}while( (ft = ft_next) != file_transfer_ring && file_transfer_ring != NULL);
+	
+			/*	fetch_curl_process(c); */
+		}		
 
 		/* Compute next fetch item at the last possible moment as
 		 * processing this item may have added to the ring.
@@ -612,4 +638,5 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 		 */
 	} while ( (c = next) != ring && ring != NULL);
 
+	
 }
