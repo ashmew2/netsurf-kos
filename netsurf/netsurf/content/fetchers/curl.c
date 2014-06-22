@@ -73,6 +73,10 @@
 #define FETCHER_CURLL_SCHEDULED 1
 */
 
+struct file_transfer {
+  struct file_transfer *next, *prev;
+  struct http_msg *http_wererat;
+};
 
 struct fetch_curl_context {
 	struct fetch_curl_context *r_next, *r_prev;
@@ -344,7 +348,7 @@ static void fetch_curl_process_error(struct fetch_curl_context *ctx, int code)
 
 	snprintf(buffer, sizeof buffer, "<html><head><title>%s</title></head>"
 			"<body><h1>%s</h1>"
-			"<p>Error %d while fetching file %s</p></body></html>",
+		 "<p>Error %d while fetching file %s</p></body></html>",
 			title, title, code, nsurl_access(ctx->url));
 
 	msg.type = FETCH_DATA;
@@ -485,7 +489,7 @@ static void fetch_curl_process(struct fetch_curl_context *ctx) {
 	http_ahoy = (struct http_msg *)wererat;
 	
 	sprintf (str, "Header %u bytes, content %u bytes, received %u bytes\n", http_ahoy->header_length, http_ahoy->content_length, http_ahoy->content_received);
-	DBG(str);	
+	DBG(str);	 
         
 	do  
 	  result = http_process(wererat);
@@ -561,11 +565,12 @@ return;
  * Do some work on current fetches.
  *
  * Must be called regularly to make progress on fetches.
+ * 
  */
 
 void fetch_curl_poll(lwc_string *scheme_ignored)
 {
-	LOG(("curl poll\n"));
+	LOG(("fetch_curl_poll function()\n"));
 	
 	struct fetch_curl_context *c, *next;
 
@@ -588,7 +593,7 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 		/* Only process non-aborted fetches */
 		if (c->aborted == false) {
 			/* file fetches can be processed in one go */
-		  DBG("Calling fetch_curl_process()");
+		        DBG("Calling fetch_curl_process()");
 			fetch_curl_process(c);
 		}
 
@@ -608,7 +613,3 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 	} while ( (c = next) != ring && ring != NULL);
 
 }
-
-
-
-
