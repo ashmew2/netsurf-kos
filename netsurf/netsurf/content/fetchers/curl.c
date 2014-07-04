@@ -149,8 +149,8 @@ static bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch,
 static CURL *fetch_curl_get_handle(lwc_string *host);
 static void fetch_curl_cache_handle(CURL *handle, lwc_string *host);
 static KOSHcode fetch_curl_set_options(struct curl_fetch_info *f);
-static KOSHcode fetch_curl_sslctxfun(CURL *curl_handle, void *_sslctx,
-				     void *p);
+/* static KOSHcode fetch_curl_sslctxfun(CURL *curl_handle, void *_sslctx, */
+/* 				     void *p); */
 static void fetch_curl_abort(void *vf);
 static void fetch_curl_stop(struct curl_fetch_info *f);
 static void fetch_curl_free(void *f);
@@ -211,41 +211,45 @@ void fetch_curl_register(void)
 	if (!fetch_blank_curl)
 		die("Failed to initialise the fetch module "
 				"(curl_easy_init failed).");
+	/* TODO: The SETOPT calls set up the parameters for the curl handle.
+	   Since we don't want to use curl, these are of no use, but our native handle 
+	   should consider all these fields while being set up for proper functioning
+	*/
 
-#undef SETOPT
-#define SETOPT(option, value) \
-	code = curl_easy_setopt(fetch_blank_curl, option, value);	\
-	if (code != CURLE_OK)						\
-		goto curl_easy_setopt_failed;
+/* #undef SETOPT */
+/* #define SETOPT(option, value) \ */
+/* 	code = curl_easy_setopt(fetch_blank_curl, option, value);	\ */
+/* 	if (code != CURLE_OK)						\ */
+/* 		goto curl_easy_setopt_failed; */
 
-	if (verbose_log) {
-	    SETOPT(CURLOPT_VERBOSE, 1);
-	} else {
-	    SETOPT(CURLOPT_VERBOSE, 0);
-	}
-	SETOPT(CURLOPT_ERRORBUFFER, fetch_error_buffer);
-	if (nsoption_bool(suppress_curl_debug))
-		SETOPT(CURLOPT_DEBUGFUNCTION, fetch_curl_ignore_debug);
-	SETOPT(CURLOPT_WRITEFUNCTION, fetch_curl_data);
-	SETOPT(CURLOPT_HEADERFUNCTION, fetch_curl_header);
-	SETOPT(CURLOPT_PROGRESSFUNCTION, fetch_curl_progress);
-	SETOPT(CURLOPT_NOPROGRESS, 0);
-	SETOPT(CURLOPT_USERAGENT, user_agent_string());
-	SETOPT(CURLOPT_ENCODING, "gzip");
-	SETOPT(CURLOPT_LOW_SPEED_LIMIT, 1L);
-	SETOPT(CURLOPT_LOW_SPEED_TIME, 180L);
-	SETOPT(CURLOPT_NOSIGNAL, 1L);
-	SETOPT(CURLOPT_CONNECTTIMEOUT, 30L);
+/* 	if (verbose_log) { */
+/* 	    SETOPT(CURLOPT_VERBOSE, 1); */
+/* 	} else { */
+/* 	    SETOPT(CURLOPT_VERBOSE, 0); */
+/* 	} */
+/* 	SETOPT(CURLOPT_ERRORBUFFER, fetch_error_buffer); */
+/* 	if (nsoption_bool(suppress_curl_debug)) */
+/* 		SETOPT(CURLOPT_DEBUGFUNCTION, fetch_curl_ignore_debug); */
+/* 	SETOPT(CURLOPT_WRITEFUNCTION, fetch_curl_data); */
+/* 	SETOPT(CURLOPT_HEADERFUNCTION, fetch_curl_header); */
+/* 	SETOPT(CURLOPT_PROGRESSFUNCTION, fetch_curl_progress); */
+/* 	SETOPT(CURLOPT_NOPROGRESS, 0); */
+/* 	SETOPT(CURLOPT_USERAGENT, user_agent_string()); */
+/* 	SETOPT(CURLOPT_ENCODING, "gzip"); */
+/* 	SETOPT(CURLOPT_LOW_SPEED_LIMIT, 1L); */
+/* 	SETOPT(CURLOPT_LOW_SPEED_TIME, 180L); */
+/* 	SETOPT(CURLOPT_NOSIGNAL, 1L); */
+/* 	SETOPT(CURLOPT_CONNECTTIMEOUT, 30L); */
 
-	if (nsoption_charp(ca_bundle) && 
-	    strcmp(nsoption_charp(ca_bundle), "")) {
-		LOG(("ca_bundle: '%s'", nsoption_charp(ca_bundle)));
-		SETOPT(CURLOPT_CAINFO, nsoption_charp(ca_bundle));
-	}
-	if (nsoption_charp(ca_path) && strcmp(nsoption_charp(ca_path), "")) {
-		LOG(("ca_path: '%s'", nsoption_charp(ca_path)));
-		SETOPT(CURLOPT_CAPATH, nsoption_charp(ca_path));
-	}
+/* 	if (nsoption_charp(ca_bundle) &&  */
+/* 	    strcmp(nsoption_charp(ca_bundle), "")) { */
+/* 		LOG(("ca_bundle: '%s'", nsoption_charp(ca_bundle))); */
+/* 		SETOPT(CURLOPT_CAINFO, nsoption_charp(ca_bundle)); */
+/* 	} */
+/* 	if (nsoption_charp(ca_path) && strcmp(nsoption_charp(ca_path), "")) { */
+/* 		LOG(("ca_path: '%s'", nsoption_charp(ca_path))); */
+/* 		SETOPT(CURLOPT_CAPATH, nsoption_charp(ca_path)); */
+/* 	} */
 
 	/*TODO: Useless for now, no SSL Support*/
 
@@ -650,91 +654,92 @@ fetch_curl_set_options(struct curl_fetch_info *f)
 {
 	KOSHcode code;
 	const char *auth;
+	/*TODO: Replace SETOPT with sane set up of parameters for our handle*/
 
-#undef SETOPT
-#define SETOPT(option, value) { \
-	code = curl_easy_setopt(f->curl_handle, option, value);	\
-	if (code != CURLE_OK)					\
-		return code;					\
-	}
+/* #undef SETOPT */
+/* #define SETOPT(option, value) { \ */
+/* 	code = curl_easy_setopt(f->curl_handle, option, value);	\ */
+/* 	if (code != CURLE_OK)					\ */
+/* 		return code;					\ */
+/* 	} */
 
-	SETOPT(CURLOPT_URL, nsurl_access(f->url));
-	SETOPT(CURLOPT_PRIVATE, f);
-	SETOPT(CURLOPT_WRITEDATA, f);
-	SETOPT(CURLOPT_WRITEHEADER, f);
-	SETOPT(CURLOPT_PROGRESSDATA, f);
-	SETOPT(CURLOPT_REFERER, fetch_get_referer_to_send(f->fetch_handle));
-	SETOPT(CURLOPT_HTTPHEADER, f->headers);
-	if (f->post_urlenc) {
-		SETOPT(CURLOPT_HTTPPOST, NULL);
-		SETOPT(CURLOPT_HTTPGET, 0L);
-		SETOPT(CURLOPT_POSTFIELDS, f->post_urlenc);
-	} else if (f->post_multipart) {
-		SETOPT(CURLOPT_POSTFIELDS, NULL);
-		SETOPT(CURLOPT_HTTPGET, 0L);
-		SETOPT(CURLOPT_HTTPPOST, f->post_multipart);
-	} else {
-		SETOPT(CURLOPT_POSTFIELDS, NULL);
-		SETOPT(CURLOPT_HTTPPOST, NULL);
-		SETOPT(CURLOPT_HTTPGET, 1L);
-	}
+/* 	SETOPT(CURLOPT_URL, nsurl_access(f->url)); */
+/* 	SETOPT(CURLOPT_PRIVATE, f); */
+/* 	SETOPT(CURLOPT_WRITEDATA, f); */
+/* 	SETOPT(CURLOPT_WRITEHEADER, f); */
+/* 	SETOPT(CURLOPT_PROGRESSDATA, f); */
+/* 	SETOPT(CURLOPT_REFERER, fetch_get_referer_to_send(f->fetch_handle)); */
+/* 	SETOPT(CURLOPT_HTTPHEADER, f->headers); */
+/* 	if (f->post_urlenc) { */
+/* 		SETOPT(CURLOPT_HTTPPOST, NULL); */
+/* 		SETOPT(CURLOPT_HTTPGET, 0L); */
+/* 		SETOPT(CURLOPT_POSTFIELDS, f->post_urlenc); */
+/* 	} else if (f->post_multipart) { */
+/* 		SETOPT(CURLOPT_POSTFIELDS, NULL); */
+/* 		SETOPT(CURLOPT_HTTPGET, 0L); */
+/* 		SETOPT(CURLOPT_HTTPPOST, f->post_multipart); */
+/* 	} else { */
+/* 		SETOPT(CURLOPT_POSTFIELDS, NULL); */
+/* 		SETOPT(CURLOPT_HTTPPOST, NULL); */
+/* 		SETOPT(CURLOPT_HTTPGET, 1L); */
+/* 	} */
 
-	f->cookie_string = urldb_get_cookie(f->url, true);
-	if (f->cookie_string) {
-		SETOPT(CURLOPT_COOKIE, f->cookie_string);
-	} else {
-		SETOPT(CURLOPT_COOKIE, NULL);
-	}
+/* 	f->cookie_string = urldb_get_cookie(f->url, true); */
+/* 	if (f->cookie_string) { */
+/* 		SETOPT(CURLOPT_COOKIE, f->cookie_string); */
+/* 	} else { */
+/* 		SETOPT(CURLOPT_COOKIE, NULL); */
+/* 	} */
 
-	if ((auth = urldb_get_auth_details(f->url, NULL)) != NULL) {
-		SETOPT(CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-		SETOPT(CURLOPT_USERPWD, auth);
-	} else {
-		SETOPT(CURLOPT_USERPWD, NULL);
-	}
+/* 	if ((auth = urldb_get_auth_details(f->url, NULL)) != NULL) { */
+/* 		SETOPT(CURLOPT_HTTPAUTH, CURLAUTH_ANY); */
+/* 		SETOPT(CURLOPT_USERPWD, auth); */
+/* 	} else { */
+/* 		SETOPT(CURLOPT_USERPWD, NULL); */
+/* 	} */
 
-	if (nsoption_bool(http_proxy) && 
-	    (nsoption_charp(http_proxy_host) != NULL) &&
-	    (strncmp(nsurl_access(f->url), "file:", 5) != 0)) {
-		SETOPT(CURLOPT_PROXY, nsoption_charp(http_proxy_host));
-		SETOPT(CURLOPT_PROXYPORT, (long) nsoption_int(http_proxy_port));
-		if (nsoption_int(http_proxy_auth) != OPTION_HTTP_PROXY_AUTH_NONE) {
-			SETOPT(CURLOPT_PROXYAUTH,
-			       nsoption_int(http_proxy_auth) ==
-					OPTION_HTTP_PROXY_AUTH_BASIC ?
-					(long) CURLAUTH_BASIC :
-					(long) CURLAUTH_NTLM);
-			snprintf(fetch_proxy_userpwd,
-					sizeof fetch_proxy_userpwd,
-					"%s:%s",
-				 nsoption_charp(http_proxy_auth_user),
-				 nsoption_charp(http_proxy_auth_pass));
-			SETOPT(CURLOPT_PROXYUSERPWD, fetch_proxy_userpwd);
-		}
-	} else {
-		SETOPT(CURLOPT_PROXY, NULL);
-	}
+/* 	if (nsoption_bool(http_proxy) &&  */
+/* 	    (nsoption_charp(http_proxy_host) != NULL) && */
+/* 	    (strncmp(nsurl_access(f->url), "file:", 5) != 0)) { */
+/* 		SETOPT(CURLOPT_PROXY, nsoption_charp(http_proxy_host)); */
+/* 		SETOPT(CURLOPT_PROXYPORT, (long) nsoption_int(http_proxy_port)); */
+/* 		if (nsoption_int(http_proxy_auth) != OPTION_HTTP_PROXY_AUTH_NONE) { */
+/* 			SETOPT(CURLOPT_PROXYAUTH, */
+/* 			       nsoption_int(http_proxy_auth) == */
+/* 					OPTION_HTTP_PROXY_AUTH_BASIC ? */
+/* 					(long) CURLAUTH_BASIC : */
+/* 					(long) CURLAUTH_NTLM); */
+/* 			snprintf(fetch_proxy_userpwd, */
+/* 					sizeof fetch_proxy_userpwd, */
+/* 					"%s:%s", */
+/* 				 nsoption_charp(http_proxy_auth_user), */
+/* 				 nsoption_charp(http_proxy_auth_pass)); */
+/* 			SETOPT(CURLOPT_PROXYUSERPWD, fetch_proxy_userpwd); */
+/* 		} */
+/* 	} else { */
+/* 		SETOPT(CURLOPT_PROXY, NULL); */
+/* 	} */
 
-	/* Disable SSL session ID caching, as some servers can't cope. */
-	SETOPT(CURLOPT_SSL_SESSIONID_CACHE, 0);
+/* 	/\* Disable SSL session ID caching, as some servers can't cope. *\/ */
+/* 	SETOPT(CURLOPT_SSL_SESSIONID_CACHE, 0); */
 
-	if (urldb_get_cert_permissions(f->url)) {
-		/* Disable certificate verification */
-		SETOPT(CURLOPT_SSL_VERIFYPEER, 0L);
-		SETOPT(CURLOPT_SSL_VERIFYHOST, 0L);
-		if (curl_with_openssl) {
-			SETOPT(CURLOPT_SSL_CTX_FUNCTION, NULL);
-			SETOPT(CURLOPT_SSL_CTX_DATA, NULL);
-		}
-	} else {
-		/* do verification */
-		SETOPT(CURLOPT_SSL_VERIFYPEER, 1L);
-		SETOPT(CURLOPT_SSL_VERIFYHOST, 2L);
-		if (curl_with_openssl) {
-			SETOPT(CURLOPT_SSL_CTX_FUNCTION, fetch_curl_sslctxfun);
-			SETOPT(CURLOPT_SSL_CTX_DATA, f);
-		}
-	}
+/* 	if (urldb_get_cert_permissions(f->url)) { */
+/* 		/\* Disable certificate verification *\/ */
+/* 		SETOPT(CURLOPT_SSL_VERIFYPEER, 0L); */
+/* 		SETOPT(CURLOPT_SSL_VERIFYHOST, 0L); */
+/* 		if (curl_with_openssl) { */
+/* 			SETOPT(CURLOPT_SSL_CTX_FUNCTION, NULL); */
+/* 			SETOPT(CURLOPT_SSL_CTX_DATA, NULL); */
+/* 		} */
+/* 	} else { */
+/* 		/\* do verification *\/ */
+/* 		SETOPT(CURLOPT_SSL_VERIFYPEER, 1L); */
+/* 		SETOPT(CURLOPT_SSL_VERIFYHOST, 2L); */
+/* 		if (curl_with_openssl) { */
+/* 			SETOPT(CURLOPT_SSL_CTX_FUNCTION, fetch_curl_sslctxfun); */
+/* 			SETOPT(CURLOPT_SSL_CTX_DATA, f); */
+/* 		} */
+/* 	} */
 
 	return CURLE_OK;
 }
