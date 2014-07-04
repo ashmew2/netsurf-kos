@@ -70,6 +70,17 @@ Let the overall structure remain intact
  ********This section added for resolving compile errors***************/
 
 #define CURL_ERROR_SIZE 100
+/*Definitions for CURL EASY Codes*/
+
+#define CURLE_OK 0
+#define CURLE_PARTIAL_FILE 18
+#define CURLE_WRITE_ERROR 23
+#define CURLE_SSL_CONNECT_ERROR 35
+
+/*Definitions for CURL MULTI Codes*/
+
+#define CURLM_OK 0
+#define CURLM_CALL_MULTI_PERFORM -1
 
 /* KOSH stands for KolibriOS HTTP :) */
 
