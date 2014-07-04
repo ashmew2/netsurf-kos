@@ -66,7 +66,8 @@ Let the overall structure remain intact
  */
 #include <desktop/browser.h>
 
-/****This section added for resolving compile errors*/
+/**********************************************************************
+ ********This section added for resolving compile errors***************/
 
 #define CURL_ERROR_SIZE 100
 
@@ -446,7 +447,7 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 		fetch->post_urlenc = strdup(post_urlenc);
 	else if (post_multipart)
 		fetch->post_multipart = fetch_curl_post_convert(post_multipart);
-	memset(fetch->cert_data, 0, sizeof(fetch->cert_data));
+	/* memset(fetch->cert_data, 0, sizeof(fetch->cert_data)); */
 	fetch->last_progress_update = 0;
 
 	if (fetch->host == NULL ||
@@ -846,10 +847,10 @@ void fetch_curl_free(void *vf)
 	if (f->post_multipart)
 		curl_formfree(f->post_multipart);
 
-	for (i = 0; i < MAX_CERTS && f->cert_data[i].cert; i++) {
-		f->cert_data[i].cert->references--;
-		if (f->cert_data[i].cert->references == 0)
-			X509_free(f->cert_data[i].cert);
+	/* for (i = 0; i < MAX_CERTS && f->cert_data[i].cert; i++) { */
+	/* 	f->cert_data[i].cert->references--; */
+	/* 	if (f->cert_data[i].cert->references == 0) */
+	/* 		X509_free(f->cert_data[i].cert); */
 	}
 
 	free(f);
@@ -929,8 +930,8 @@ void fetch_curl_done(CURL *curl_handle, KOSHcode result)
 	struct curl_fetch_info *f;
 	char **_hideous_hack = (char **) (void *) &f;
 	KOSHcode code;
-	struct cert_info certs[MAX_CERTS];
-	memset(certs, 0, sizeof(certs));
+	/* struct cert_info certs[MAX_CERTS]; */
+	/* memset(certs, 0, sizeof(certs)); */
 
 	/* find the structure associated with this fetch */
 	/* For some reason, cURL thinks CURLINFO_PRIVATE should be a string?! */
@@ -969,11 +970,11 @@ void fetch_curl_done(CURL *curl_handle, KOSHcode result)
 		/* CURLE_WRITE_ERROR occurs when fetch_curl_data
 		 * returns 0, which we use to abort intentionally */
 		;
-	} else if (result == CURLE_SSL_PEER_CERTIFICATE ||
-			result == CURLE_SSL_CACERT) {
-		memcpy(certs, f->cert_data, sizeof(certs));
-		memset(f->cert_data, 0, sizeof(f->cert_data));
-		cert = true;
+	/* } else if (result == CURLE_SSL_PEER_CERTIFICATE || */
+	/* 		result == CURLE_SSL_CACERT) { */
+	/* 	memcpy(certs, f->cert_data, sizeof(certs)); */
+	/* 	memset(f->cert_data, 0, sizeof(f->cert_data)); */
+	/* 	cert = true; */
 	} else {
 		LOG(("Unknown cURL response code %d", result));
 		error = true;
@@ -986,87 +987,87 @@ void fetch_curl_done(CURL *curl_handle, KOSHcode result)
 	else if (finished) {
 		msg.type = FETCH_FINISHED;
 		fetch_send_callback(&msg, f->fetch_handle);
-	} else if (cert) {
-		int i;
-		BIO *mem;
-		BUF_MEM *buf;
-		struct ssl_cert_info ssl_certs[MAX_CERTS];
+	/* } else if (cert) { */
+	/* 	int i; */
+	/* 	BIO *mem; */
+	/* 	BUF_MEM *buf; */
+	/* 	/\* struct ssl_cert_info ssl_certs[MAX_CERTS]; *\/ */
 
-		for (i = 0; i < MAX_CERTS && certs[i].cert; i++) {
-			ssl_certs[i].version =
-				X509_get_version(certs[i].cert);
+	/* 	for (i = 0; i < MAX_CERTS && certs[i].cert; i++) { */
+	/* 		ssl_certs[i].version = */
+	/* 			X509_get_version(certs[i].cert); */
 
-			mem = BIO_new(BIO_s_mem());
-			ASN1_TIME_print(mem,
-					X509_get_notBefore(certs[i].cert));
-			BIO_get_mem_ptr(mem, &buf);
-			(void) BIO_set_close(mem, BIO_NOCLOSE);
-			BIO_free(mem);
-			snprintf(ssl_certs[i].not_before,
-					min(sizeof ssl_certs[i].not_before,
-						(unsigned) buf->length + 1),
-					"%s", buf->data);
-			BUF_MEM_free(buf);
+	/* 		mem = BIO_new(BIO_s_mem()); */
+	/* 		ASN1_TIME_print(mem, */
+	/* 				X509_get_notBefore(certs[i].cert)); */
+	/* 		BIO_get_mem_ptr(mem, &buf); */
+	/* 		(void) BIO_set_close(mem, BIO_NOCLOSE); */
+	/* 		BIO_free(mem); */
+	/* 		snprintf(ssl_certs[i].not_before, */
+	/* 				min(sizeof ssl_certs[i].not_before, */
+	/* 					(unsigned) buf->length + 1), */
+	/* 				"%s", buf->data); */
+	/* 		BUF_MEM_free(buf); */
 
-			mem = BIO_new(BIO_s_mem());
-			ASN1_TIME_print(mem,
-					X509_get_notAfter(certs[i].cert));
-			BIO_get_mem_ptr(mem, &buf);
-			(void) BIO_set_close(mem, BIO_NOCLOSE);
-			BIO_free(mem);
-			snprintf(ssl_certs[i].not_after,
-					min(sizeof ssl_certs[i].not_after,
-						(unsigned) buf->length + 1),
-					"%s", buf->data);
-			BUF_MEM_free(buf);
+	/* 		mem = BIO_new(BIO_s_mem()); */
+	/* 		ASN1_TIME_print(mem, */
+	/* 				X509_get_notAfter(certs[i].cert)); */
+	/* 		BIO_get_mem_ptr(mem, &buf); */
+	/* 		(void) BIO_set_close(mem, BIO_NOCLOSE); */
+	/* 		BIO_free(mem); */
+	/* 		snprintf(ssl_certs[i].not_after, */
+	/* 				min(sizeof ssl_certs[i].not_after, */
+	/* 					(unsigned) buf->length + 1), */
+	/* 				"%s", buf->data); */
+	/* 		BUF_MEM_free(buf); */
 
-			ssl_certs[i].sig_type =
-				X509_get_signature_type(certs[i].cert);
-			ssl_certs[i].serial =
-				ASN1_INTEGER_get(
-					X509_get_serialNumber(certs[i].cert));
-			mem = BIO_new(BIO_s_mem());
-			X509_NAME_print_ex(mem,
-				X509_get_issuer_name(certs[i].cert),
-				0, XN_FLAG_SEP_CPLUS_SPC |
-					XN_FLAG_DN_REV | XN_FLAG_FN_NONE);
-			BIO_get_mem_ptr(mem, &buf);
-			(void) BIO_set_close(mem, BIO_NOCLOSE);
-			BIO_free(mem);
-			snprintf(ssl_certs[i].issuer,
-					min(sizeof ssl_certs[i].issuer,
-						(unsigned) buf->length + 1),
-					"%s", buf->data);
-			BUF_MEM_free(buf);
+	/* 		ssl_certs[i].sig_type = */
+	/* 			X509_get_signature_type(certs[i].cert); */
+	/* 		ssl_certs[i].serial = */
+	/* 			ASN1_INTEGER_get( */
+	/* 				X509_get_serialNumber(certs[i].cert)); */
+	/* 		mem = BIO_new(BIO_s_mem()); */
+	/* 		X509_NAME_print_ex(mem, */
+	/* 			X509_get_issuer_name(certs[i].cert), */
+	/* 			0, XN_FLAG_SEP_CPLUS_SPC | */
+	/* 				XN_FLAG_DN_REV | XN_FLAG_FN_NONE); */
+	/* 		BIO_get_mem_ptr(mem, &buf); */
+	/* 		(void) BIO_set_close(mem, BIO_NOCLOSE); */
+	/* 		BIO_free(mem); */
+	/* 		snprintf(ssl_certs[i].issuer, */
+	/* 				min(sizeof ssl_certs[i].issuer, */
+	/* 					(unsigned) buf->length + 1), */
+	/* 				"%s", buf->data); */
+	/* 		BUF_MEM_free(buf); */
 
-			mem = BIO_new(BIO_s_mem());
-			X509_NAME_print_ex(mem,
-				X509_get_subject_name(certs[i].cert),
-				0, XN_FLAG_SEP_CPLUS_SPC |
-					XN_FLAG_DN_REV | XN_FLAG_FN_NONE);
-			BIO_get_mem_ptr(mem, &buf);
-			(void) BIO_set_close(mem, BIO_NOCLOSE);
-			BIO_free(mem);
-			snprintf(ssl_certs[i].subject,
-					min(sizeof ssl_certs[i].subject,
-						(unsigned) buf->length + 1),
-					"%s", buf->data);
-			BUF_MEM_free(buf);
+	/* 		mem = BIO_new(BIO_s_mem()); */
+	/* 		X509_NAME_print_ex(mem, */
+	/* 			X509_get_subject_name(certs[i].cert), */
+	/* 			0, XN_FLAG_SEP_CPLUS_SPC | */
+	/* 				XN_FLAG_DN_REV | XN_FLAG_FN_NONE); */
+	/* 		BIO_get_mem_ptr(mem, &buf); */
+	/* 		(void) BIO_set_close(mem, BIO_NOCLOSE); */
+	/* 		BIO_free(mem); */
+	/* 		snprintf(ssl_certs[i].subject, */
+	/* 				min(sizeof ssl_certs[i].subject, */
+	/* 					(unsigned) buf->length + 1), */
+	/* 				"%s", buf->data); */
+	/* 		BUF_MEM_free(buf); */
 
-			ssl_certs[i].cert_type =
-				X509_certificate_type(certs[i].cert,
-					X509_get_pubkey(certs[i].cert));
+	/* 		ssl_certs[i].cert_type = */
+	/* 			X509_certificate_type(certs[i].cert, */
+	/* 				X509_get_pubkey(certs[i].cert)); */
 
-			/* and clean up */
-			certs[i].cert->references--;
-			if (certs[i].cert->references == 0)
-				X509_free(certs[i].cert);
-		}
+	/* 		/\* and clean up *\/ */
+	/* 		certs[i].cert->references--; */
+	/* 		if (certs[i].cert->references == 0) */
+	/* 			X509_free(certs[i].cert); */
+	/* 	} */
 
-		msg.type = FETCH_CERT_ERR;
-		msg.data.cert_err.certs = ssl_certs;
-		msg.data.cert_err.num_certs = i;
-		fetch_send_callback(&msg, f->fetch_handle);
+	/* 	msg.type = FETCH_CERT_ERR; */
+	/* 	msg.data.cert_err.certs = ssl_certs; */
+	/* 	msg.data.cert_err.num_certs = i; */
+	/* 	fetch_send_callback(&msg, f->fetch_handle); */
 	} else if (error) {
 		if (result != CURLE_SSL_CONNECT_ERROR) {
 			msg.type = FETCH_ERROR;
