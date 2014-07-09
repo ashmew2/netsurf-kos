@@ -199,6 +199,8 @@ static struct curl_httppost *fetch_curl_post_convert(
 /* static int fetch_curl_cert_verify_callback(X509_STORE_CTX *x509_ctx, */
 /* 		void *parm); */
 
+/**************Functions added for replacing curl's provided functionality ************/
+struct curl_slist *curl_slist_append(struct curl_slist * list, const char * string ); 
 
 /**
  * Initialise the fetcher.
@@ -1522,3 +1524,34 @@ fetch_curl_post_convert(const struct fetch_multipart_data *control)
 
 /* 	return ok; */
 /* } */
+
+/* struct curl_slist { */
+/*    char *data; */
+/*    struct curl_slist *next; */
+/*  };  */
+
+struct curl_slist *curl_slist_append(struct curl_slist * list, const char * string )
+{
+  curl_slist *newnode = NULL;
+  
+  newnode = malloc(sizeof(struct curl_slist));
+  strcpy(newnode->data, string);
+  
+  newnode->next = NULL;
+
+  if(!list)
+    {
+      list = newnode;
+    }
+  else /*list isn't null*/
+    {
+      struct curl_slist *temp = list;
+
+      while(temp->next!=NULL)
+	temp = temp->next;
+      
+      temp->next = newnode;
+    }
+
+  return list;
+}  
