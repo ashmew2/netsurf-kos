@@ -87,12 +87,24 @@ Let the overall structure remain intact
 struct KOSHcode {
   long code;
 };
-typedef struct KOSHcode KOSHcode;
 
+struct KOSHMcode {
+  long code;
+};
+
+struct KOSHMsg {
+  char *msg;
+};
+
+typedef struct KOSHcode KOSHcode;
+typedef struct KOSHMcode KOSHMcode;
 struct kosh_infotype {
   int type;
 };
 typedef struct kosh_infotype kosh_infotype;
+
+
+
 /**********************************************************************/
 
 /* uncomment this to use scheduler based calling
@@ -197,7 +209,7 @@ static struct curl_httppost *fetch_curl_post_convert(
 void fetch_curl_register(void)
 {
 	/* KOSHcode code; */
-	curl_version_info_data *data;
+	/* curl_version_info_data *data; */
 	int i;
 	lwc_string *scheme;
 
@@ -333,7 +345,7 @@ void fetch_curl_register(void)
 			       fetch_curl_setup,
 			       fetch_curl_start,
 			       fetch_curl_abort,
-			       sfetch_curl_free,
+			       fetch_curl_free,
 #ifdef FETCHER_CURLL_SCHEDULED
 			       NULL,
 #else
@@ -376,7 +388,8 @@ void fetch_curl_finalise(lwc_string *scheme)
 	curl_fetchers_registered--;
 	LOG(("Finalise cURL fetcher %s", lwc_string_data(scheme)));
 	if (curl_fetchers_registered == 0) {
-		CURLMcode codem;
+		/* KOSHMcode codem; */
+              	int codem;
 		/* All the fetchers have been finalised. */
 		LOG(("All cURL fetchers finalised, closing down cURL"));
 
@@ -554,14 +567,14 @@ bool fetch_curl_start(void *vfetch)
 
 bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, CURL *handle)
 {
-	KOSHcode code;
-	CURLMcode codem;
+	KOSHcode code; 
+        KOSHMcode codem;
 
 	fetch->curl_handle = handle;
 
 	/* Initialise the handle */
 	code = fetch_curl_set_options(fetch);
-	if (code != CURLE_OK) {
+	if (code.code != CURLE_OK) {
 		fetch->curl_handle = 0;
 		return false;
 	}
@@ -572,8 +585,8 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, CURL *handle)
 
 	/* add to the global curl multi handle */
 
-	codem = curl_multi_add_handle(fetch_curl_multi, fetch->curl_handle);
-	assert(codem == CURLM_OK || codem == CURLM_CALL_MULTI_PERFORM);
+	codem.code = curl_multi_add_handle(fetch_curl_multi, fetch->curl_handle);
+	assert(codem.code == CURLM_OK || codem.code == CURLM_CALL_MULTI_PERFORM);
 
 	/* TODO: No idea what this does right now*/
 	schedule(1, (schedule_callback_fn)fetch_curl_poll, NULL);
@@ -751,8 +764,9 @@ fetch_curl_set_options(struct curl_fetch_info *f)
 /* 			SETOPT(CURLOPT_SSL_CTX_DATA, f); */
 /* 		} */
 /* 	} */
-
-	return CURLE_OK;
+	code.code = CURLE_OK;
+	return code;
+	/* return CURLE_OK; */
 }
 
 
@@ -818,7 +832,7 @@ void fetch_curl_abort(void *vf)
 
 void fetch_curl_stop(struct curl_fetch_info *f)
 {
-	CURLMcode codem;
+	KOSHMcode codem;
 	/*TODO: Assert doesn't look like a safe option, but this is probably a fatal condition*/
 
 	assert(f);
@@ -828,9 +842,9 @@ void fetch_curl_stop(struct curl_fetch_info *f)
 		/* remove from curl multi handle */
 	  /*TODO: Need a replacement for curl_multi_remove_handle function*/
 
-		codem = curl_multi_remove_handle(fetch_curl_multi,
+		codem.code = curl_multi_remove_handle(fetch_curl_multi,
 				f->curl_handle);
-		assert(codem == CURLM_OK);
+		assert(codem.code == CURLM_OK);
 		/* Put this curl handle into the cache if wanted. */
 		fetch_curl_cache_handle(f->curl_handle, f->host);
 		f->curl_handle = 0;
@@ -867,7 +881,7 @@ void fetch_curl_free(void *vf)
 	/* 	f->cert_data[i].cert->references--; */
 	/* 	if (f->cert_data[i].cert->references == 0) */
 	/* 		X509_free(f->cert_data[i].cert); */
-	}
+	/* } */
 
 	free(f);
 }
@@ -887,36 +901,44 @@ void fetch_curl_free(void *vf)
 void fetch_curl_poll(lwc_string *scheme_ignored)
 {
 	int running, queue;
-	CURLMcode codem;
-	CURLMsg *curl_msg;
+	KOSHMcode codem;
+	/* KOSHMsg *curl_msg; */
+
+	/*TODO: Probably the best way is to combine both loops and use http_process to judge finished transfers*/
 	
 	/* do any possible work on the current fetches */
 	do {
 	  /* TODO: Replace curl_multi_perform function. This is the master function. */
 
-		codem = curl_multi_perform(fetch_curl_multi, &running);
-		if (codem != CURLM_OK && codem != CURLM_CALL_MULTI_PERFORM) {
+		codem.code = curl_multi_perform(fetch_curl_multi, &running);
+		if (codem.code != CURLM_OK && codem.code != CURLM_CALL_MULTI_PERFORM) {
 			LOG(("curl_multi_perform: %i %s",
 					codem, curl_multi_strerror(codem)));
 			warn_user("MiscError", curl_multi_strerror(codem));
 			return;
 		}
-	} while (codem == CURLM_CALL_MULTI_PERFORM);
+	} while (codem.code == CURLM_CALL_MULTI_PERFORM);
 
 	/* process curl results */
 	/*TODO: Needs to be replaced , no idea how to do it right now */
-	curl_msg = curl_multi_info_read(fetch_curl_multi, &queue);
-	while (curl_msg) {
-		switch (curl_msg->msg) {
-			case CURLMSG_DONE:
-				fetch_curl_done(curl_msg->easy_handle,
-						curl_msg->data.result);
-				break;
-			default:
-				break;
-		}
-		curl_msg = curl_multi_info_read(fetch_curl_multi, &queue);
-	}
+	/* Go through each http_get handle from http.obj and check if it's done yet or not , 
+	   using the return value from http_process.   If done, remove it. Else let it stay.
+	*/
+	/*TODO: This has been commented to figure out linker errors.
+	  Uncomment this and combine this with the above chunk toget the main process loop
+	*/
+	/* curl_msg = curl_multi_info_read(fetch_curl_multi, &queue); */
+	/* while (curl_msg) { */
+	/* 	switch (curl_msg->msg) { */
+	/* 		case CURLMSG_DONE: */
+	/* 			fetch_curl_done(curl_msg->easy_handle, */
+	/* 					curl_msg->data.result); */
+	/* 			break; */
+	/* 		default: */
+	/* 			break; */
+	/* 	} */
+	/* 	curl_msg = curl_multi_info_read(fetch_curl_multi, &queue); */
+	/* } */
 
 #ifdef FETCHER_CURLL_SCHEDULED
 	if (running != 0) {
@@ -946,19 +968,24 @@ void fetch_curl_done(CURL *curl_handle, KOSHcode result)
 	struct curl_fetch_info *f;
 	char **_hideous_hack = (char **) (void *) &f;
 	KOSHcode code;
+	
+	/* TODO: Remove this definition and get a better replacement for CURLINFO_PRIVATE */
+	
+	int CURLINFO_PRIVATE = 20;
+
 	/* struct cert_info certs[MAX_CERTS]; */
 	/* memset(certs, 0, sizeof(certs)); */
 
 	/* find the structure associated with this fetch */
 	/* For some reason, cURL thinks CURLINFO_PRIVATE should be a string?! */
-	code = curl_easy_getinfo(curl_handle, CURLINFO_PRIVATE, _hideous_hack);
-	assert(code == CURLE_OK);
+	code.code = curl_easy_getinfo(curl_handle, CURLINFO_PRIVATE, _hideous_hack);
+	assert(code.code == CURLE_OK);
 
 	abort_fetch = f->abort;
 	LOG(("done %s", nsurl_access(f->url)));
 
-	if (abort_fetch == false && (result == CURLE_OK ||
-			(result == CURLE_WRITE_ERROR && f->stopped == false))) {
+	if (abort_fetch == false && (result.code == CURLE_OK ||
+			(result.code == CURLE_WRITE_ERROR && f->stopped == false))) {
 		/* fetch completed normally or the server fed us a junk gzip 
 		 * stream (usually in the form of garbage at the end of the 
 		 * stream). Curl will have fed us all but the last chunk of 
@@ -973,7 +1000,7 @@ void fetch_curl_done(CURL *curl_handle, KOSHcode result)
 			; /* redirect with no body or similar */
 		else
 			finished = true;
-	} else if (result == CURLE_PARTIAL_FILE) {
+	} else if (result.code == CURLE_PARTIAL_FILE) {
 		/* CURLE_PARTIAL_FILE occurs if the received body of a
 		 * response is smaller than that specified in the
 		 * Content-Length header. */
@@ -982,7 +1009,7 @@ void fetch_curl_done(CURL *curl_handle, KOSHcode result)
 		else {
 			finished = true;
 		}
-	} else if (result == CURLE_WRITE_ERROR && f->stopped) {
+	} else if (result.code == CURLE_WRITE_ERROR && f->stopped) {
 		/* CURLE_WRITE_ERROR occurs when fetch_curl_data
 		 * returns 0, which we use to abort intentionally */
 		;
@@ -1085,7 +1112,7 @@ void fetch_curl_done(CURL *curl_handle, KOSHcode result)
 	/* 	msg.data.cert_err.num_certs = i; */
 	/* 	fetch_send_callback(&msg, f->fetch_handle); */
 	} else if (error) {
-		if (result != CURLE_SSL_CONNECT_ERROR) {
+		if (result.code != CURLE_SSL_CONNECT_ERROR) {
 			msg.type = FETCH_ERROR;
 			msg.data.error = fetch_error_buffer;
 		} else {
@@ -1181,10 +1208,13 @@ size_t fetch_curl_data(char *data, size_t size, size_t nmemb,
 	/* ensure we only have to get this information once */
 	if (!f->http_code)
 	{
-		code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE,
-					 &f->http_code);
+		/* TODO: For extracting the http response code of what happened in case we don't already have that.
+		   http_get struct should have this info available for query.
+
+		   code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
+		/* 			 &f->http_code); */
 		fetch_set_http_code(f->fetch_handle, f->http_code);
-		assert(code == CURLE_OK);
+		assert(code.code == CURLE_OK);
 	}
 
 	/* ignore body if this is a 401 reply by skipping it and reset
@@ -1318,11 +1348,12 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	f->had_headers = true;
 
 	if (!f->http_code)
-	{
-		code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE,
-					 &f->http_code);
+	  {
+	  /* TODO: Handle this like another similar piece of code in the file with HTTP_CODE_CURLINFO */
+		/* code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
+		/* 			 &f->http_code); */
 		fetch_set_http_code(f->fetch_handle, f->http_code);
-		assert(code == CURLE_OK);
+		assert(code.code == CURLE_OK);
 	}
 	http_code = f->http_code;
 	LOG(("HTTP status code %li", http_code));
@@ -1373,12 +1404,13 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
  */
 
 /*TODO : Not sure how to handle multipart data yet, but hopefully it'll be figured out soon*/
-
+/* TODO: Seems like the forms that are being created use sequential fields, so we can probably craft the same */
+/*   using post from http,obj */
 struct curl_httppost *
 fetch_curl_post_convert(const struct fetch_multipart_data *control)
 {
 	struct curl_httppost *post = 0, *last = 0;
-	CURLFORMcode code;
+	/* TODO: CURLFORMcode code; */
 
 	for (; control; control = control->next) {
 		if (control->file) {
@@ -1400,45 +1432,45 @@ fetch_curl_post_convert(const struct fetch_multipart_data *control)
 				 * attempting to access it, of course). */
 				static char buf;
 
-				code = curl_formadd(&post, &last,
-					CURLFORM_COPYNAME, control->name,
-					CURLFORM_BUFFER, control->value,
-					/* needed, as basename("") == "." */
-					CURLFORM_FILENAME, "",
-					CURLFORM_BUFFERPTR, &buf,
-					CURLFORM_BUFFERLENGTH, 0,
-					CURLFORM_CONTENTTYPE,
-						"application/octet-stream",
-					CURLFORM_END);
-				if (code != CURL_FORMADD_OK)
-					LOG(("curl_formadd: %d (%s)",
-						code, control->name));
+				/* code = curl_formadd(&post, &last, */
+				/* 	CURLFORM_COPYNAME, control->name, */
+				/* 	CURLFORM_BUFFER, control->value, */
+				/* 	/\* needed, as basename("") == "." *\/ */
+				/* 	CURLFORM_FILENAME, "", */
+				/* 	CURLFORM_BUFFERPTR, &buf, */
+				/* 	CURLFORM_BUFFERLENGTH, 0, */
+				/* 	CURLFORM_CONTENTTYPE, */
+				/* 		"application/octet-stream", */
+				/* 	CURLFORM_END); */
+				/* if (code != CURL_FORMADD_OK) */
+				/* 	LOG(("curl_formadd: %d (%s)", */
+				/* 		code, control->name)); */
 			} else {
-				char *mimetype = fetch_mimetype(control->value);
-				code = curl_formadd(&post, &last,
-					CURLFORM_COPYNAME, control->name,
-					CURLFORM_FILE, control->value,
-					CURLFORM_FILENAME, leafname,
-					CURLFORM_CONTENTTYPE,
-					(mimetype != 0 ? mimetype : "text/plain"),
-					CURLFORM_END);
-				if (code != CURL_FORMADD_OK)
-					LOG(("curl_formadd: %d (%s=%s)",
-						code, control->name,
-						control->value));
-				free(mimetype);
+				/* char *mimetype = fetch_mimetype(control->value); */
+				/* code = curl_formadd(&post, &last, */
+				/* 	CURLFORM_COPYNAME, control->name, */
+				/* 	CURLFORM_FILE, control->value, */
+				/* 	CURLFORM_FILENAME, leafname, */
+				/* 	CURLFORM_CONTENTTYPE, */
+				/* 	(mimetype != 0 ? mimetype : "text/plain"), */
+				/* 	CURLFORM_END); */
+				/* if (code != CURL_FORMADD_OK) */
+				/* 	LOG(("curl_formadd: %d (%s=%s)", */
+				/* 		code, control->name, */
+				/* 		control->value)); */
+				/* free(mimetype); */
 			}
 			free(leafname);
 		}
 		else {
-			code = curl_formadd(&post, &last,
-					CURLFORM_COPYNAME, control->name,
-					CURLFORM_COPYCONTENTS, control->value,
-					CURLFORM_END);
-			if (code != CURL_FORMADD_OK)
-				LOG(("curl_formadd: %d (%s=%s)", code,
-						control->name,
-						control->value));
+			/* code = curl_formadd(&post, &last, */
+			/* 		CURLFORM_COPYNAME, control->name, */
+			/* 		CURLFORM_COPYCONTENTS, control->value, */
+			/* 		CURLFORM_END); */
+			/* if (code != CURL_FORMADD_OK) */
+			/* 	LOG(("curl_formadd: %d (%s=%s)", code, */
+			/* 			control->name, */
+			/* 			control->value)); */
 		}
 	}
 
