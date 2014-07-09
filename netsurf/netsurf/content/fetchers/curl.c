@@ -205,6 +205,7 @@ static struct curl_httppost *fetch_curl_post_convert(
 
 /**************Functions added for replacing curl's provided functionality ************/
 struct curl_slist *curl_slist_append(struct curl_slist * list, const char * string ); 
+void curl_slist_free_all(struct curl_slist *);
 
 /**
  * Initialise the fetcher.
@@ -1554,3 +1555,15 @@ struct curl_slist *curl_slist_append(struct curl_slist * list, const char * stri
 
   return list;
 }  
+
+void curl_slist_free_all(struct curl_slist *list)
+{
+  struct curl_slist *temp = list;
+
+  while(list)
+    {
+      temp = list->next;
+      free(list);
+      list = temp;
+    }
+}
