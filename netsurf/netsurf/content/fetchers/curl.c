@@ -154,6 +154,7 @@ struct cache_handle {
 };
 
 CURLM *fetch_curl_multi;		/**< Global cURL multi handle. */
+
 /** Curl handle with default options set; not used for transfers. */
 static CURL *fetch_blank_curl;
 static struct cache_handle *curl_handle_ring = 0; /**< Ring of cached handles */
@@ -591,7 +592,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, CURL *handle)
 	   for polling later on multiple transfers together*/
 
 	/* add to the global curl multi handle */
-
+	
 	codem.code = curl_multi_add_handle(fetch_curl_multi, fetch->curl_handle);
 	assert(codem.code == CURLM_OK || codem.code == CURLM_CALL_MULTI_PERFORM);
 
@@ -1535,6 +1536,10 @@ struct curl_slist *curl_slist_append(struct curl_slist * list, const char * stri
   struct curl_slist *newnode = NULL;
   
   newnode = malloc(sizeof(struct curl_slist));
+
+  if(newnode == NULL)
+    return NULL;
+
   strcpy(newnode->data, string);
   
   newnode->next = NULL;
@@ -1566,4 +1571,9 @@ void curl_slist_free_all(struct curl_slist *list)
       free(list);
       list = temp;
     }
+}
+
+int curl_multi_add_handle(struct http_get multi_handle, struct http_get new_handle)
+{
+  
 }
