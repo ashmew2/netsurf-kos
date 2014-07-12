@@ -108,6 +108,10 @@ typedef struct kosh_infotype kosh_infotype;
    struct curl_slist *next;
  };
 
+struct http_get_slist {
+   char *data;
+   struct http_get_slist *next;
+};
 
 /**********************************************************************/
 
@@ -596,7 +600,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, CURL *handle)
 	codem.code = curl_multi_add_handle(fetch_curl_multi, fetch->curl_handle);
 	assert(codem.code == CURLM_OK || codem.code == CURLM_CALL_MULTI_PERFORM);
 
-	/* TODO: No idea what this does right now*/
+	/* TODO: No idea what this does right now. Shouldn't this be inside an #if macro call? to enable/disable curll scheduling.*/
 	schedule(1, (schedule_callback_fn)fetch_curl_poll, NULL);
 	
 	return true;
@@ -1573,7 +1577,68 @@ void curl_slist_free_all(struct curl_slist *list)
     }
 }
 
-int curl_multi_add_handle(struct http_get multi_handle, struct http_get new_handle)
-{
-  
+int curl_multi_add_handle(struct http_get_slist *multi_handle, struct http_get_slist *new_handle)
+{  
+  if(multi_handle == NULL)
+    {
+      multi_handle = new_handle;     
+      multi_handle->next = NULL;
+    }
+  else
+    {
+      http_get_slist *temp = multi_handle;
+      
+      while(temp->next)
+	{
+	  temp = temp->next;
+	}
+      
+      temp->next = new_handle;
+      new_handle->next = NULL;     
+    }
 }
+
+/* When this function returns, it is assured that the multi list does not contain the node to be deleted. 
+   If it was, it was deleted. Else, the list is left unchanged 
+*/
+
+/* This can be sped up a lot by using hash tables or the like for removal to be more speedy :)
+LTG
+*/
+
+http_get_slist *curl_multi_remove_handle(struct http_get_slist *multi_handle, struct http_get *data_to_delete)
+{
+  if(multi_handle == NULL || data_to_delete == NULL)
+    return multi_handle;
+
+  http_get_slist *temp = multi_handle;
+
+  if(temp->data == data_to_delete) /* special case for first node deletion */
+    {      
+      multi_handle = multi_handle->next;
+      free(temp);
+    }
+  else /* If the data is present in any consecutive node */
+    {
+      http_get_slist *temp2 = multi_handle->next;
+      
+      while(temp2)
+	{	  	  
+	  if(temp2->data == data_to_delete) 
+	    {	      	      
+	      temp->next = temp2->next;
+	      free(temp2);
+	      break;
+	    }
+	  else
+	    {
+	      temp = temp2;
+	      temp2 = temp2->next;
+	    }	  
+	}   
+    }
+
+  return multi_handle;
+}
+
+/* TODO: Get rid of the curl functions soon */
