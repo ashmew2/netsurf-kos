@@ -230,7 +230,7 @@ void fetch_curl_register(void)
 	int i;
 	lwc_string *scheme;
 
-	LOG(("curl_version (no CURL XD) : %s", curl_version()));
+	LOG(("curl_version (no CURL XD) : %s", "call to curl_version() used to be here"));
 
 	/* code = curl_global_init(CURL_GLOBAL_ALL); */
 	/* if (code != CURLE_OK) */
@@ -503,8 +503,8 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 		fetch->post_urlenc = strdup(post_urlenc);
 	else if (post_multipart)
 	  /*TODO: Need a post converter here, shouldn't be large though*/
+	  fetch->post_multipart = fetch_curl_post_convert(post_multipart);
 
-	fetch->post_multipart = fetch_curl_post_convert(post_multipart);
 	/* memset(fetch->cert_data, 0, sizeof(fetch->cert_data)); */
 	fetch->last_progress_update = 0;
 
@@ -567,8 +567,9 @@ failed:
 
 	nsurl_unref(fetch->url);
 	free(fetch->post_urlenc);
-	if (fetch->post_multipart)
-		curl_formfree(fetch->post_multipart);
+	/* TOOD: Figure out a way to deal with post data. */
+	/* if (fetch->post_multipart) */
+	/* 	curl_formfree(fetch->post_multipart); */
 	curl_slist_free_all(fetch->headers);
 	free(fetch);
 	return NULL;
@@ -599,6 +600,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 {
 	KOSHcode code; 
         KOSHMcode codem;
+	unsigned int wererat;
 
 	fetch->curl_handle = handle;
 	/* Don't need to add options to handle from http obj */
@@ -613,12 +615,21 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	   for polling later on multiple transfers together*/
 
 	/* add to the global curl multi handle */
+	char *zz;
+	int pr;
+	nsurl_get(fetch->url, NSURL_WITH_FRAGMENT, &zz, &pr);
 	
+	if (zz == NULL) {
+	  fetch_curl_abort(fetch);
+	  return NULL;
+	}
+	
+	wererat = http_get(zz, NULL); /* Initiates the GET on the handle we want to initiate for */
 	codem.code = curl_multi_add_handle(fetch_curl_multi, fetch->curl_handle);
-
+	
 	/* Probably drop the assert and handle this properly, but that's for later */
 	assert(codem.code == CURLM_OK || codem.code == CURLM_CALL_MULTI_PERFORM);
-
+	
 	/* TODO: No idea what this does right now. Shouldn't this be inside an #if macro call? to enable/disable curll scheduling.*/
 	schedule(1, (schedule_callback_fn)fetch_curl_poll, NULL);
 	
@@ -908,8 +919,9 @@ void fetch_curl_free(void *vf)
 	if (f->headers)
 		curl_slist_free_all(f->headers);
 	free(f->post_urlenc);
-	if (f->post_multipart)
-		curl_formfree(f->post_multipart);
+	/* TODO: Deal with POST data asap */
+	/* if (f->post_multipart) */
+	/* 	curl_formfree(f->post_multipart); */
 
 	/* for (i = 0; i < MAX_CERTS && f->cert_data[i].cert; i++) { */
 	/* 	f->cert_data[i].cert->references--; */
@@ -946,9 +958,14 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 
 		codem.code = curl_multi_perform(fetch_curl_multi, &running);
 		if (codem.code != CURLM_OK && codem.code != CURLM_CALL_MULTI_PERFORM) {
-			LOG(("curl_multi_perform: %i %s",
-					codem, curl_multi_strerror(codem)));
-			warn_user("MiscError", curl_multi_strerror(codem));
+		  /* 			LOG(("curl_multi_perform: %i %s", */
+		  /* 					codem, curl_multi_strerror(codem))); */
+		  
+		  /* warn_user("MiscError", curl_multi_strerror(codem)); */
+
+		  LOG(("curl_multi_perform screwed up."));
+		  warn_user("MiscError", "curl_multi_strerror is not written yet");
+
 			return;
 		}
 	} while (codem.code == CURLM_CALL_MULTI_PERFORM);
@@ -1012,8 +1029,9 @@ void fetch_curl_done(struct http_msg *curl_handle, int result)
 
 	/* find the structure associated with this fetch */
 	/* For some reason, cURL thinks CURLINFO_PRIVATE should be a string?! */
-	code.code = curl_easy_getinfo(curl_handle, CURLINFO_PRIVATE, _hideous_hack);
-	assert(code.code == CURLE_OK);
+ /* TODO: Do we really need curl_easy_getinfo? Our library struct provides us with all of this info already  */
+	/* code.code = curl_easy_getinfo(curl_handle, CURLINFO_PRIVATE, _hideous_hack); */
+	/* assert(code.code == CURLE_OK); */
 
 	abort_fetch = f->abort;
 	LOG(("done %s", nsurl_access(f->url)));
@@ -1685,24 +1703,24 @@ struct http_msg_slist *curl_multi_remove_handle(struct http_msg_slist *multi_han
  /* TODO: Actually a function to return a blank handle. The name is misleading right now */
 struct http_msg * curl_easy_init(void)
 {
-  struct http_msg *new_handle = (struct http_msg *)malloc(sizeof(struct http_msg));
+  struct http_msg *new_handle; /* = (struct http_msg *)malloc(sizeof(struct http_msg)); */
   
-  if(new_handle == NULL)
-    return NULL;
+  /* if(new_handle == NULL) */
+  /*   return NULL; */
   
-  new_handle->socket = 0;
-  new_handle->flags = 0;
-  new_handle->write_ptr = 0;
-  new_handle->buffer_length = 0;
-  new_handle->chunk_ptr = 0;
-  new_handle->timestamp = 0;
+  /* new_handle->socket = 0; */
+  /* new_handle->flags = 0; */
+  /* new_handle->write_ptr = 0; */
+  /* new_handle->buffer_length = 0; */
+  /* new_handle->chunk_ptr = 0; */
+  /* new_handle->timestamp = 0; */
 
-  new_handle->status = 0;
-  new_handle->header_length = 0;
-  new_handle->content_ptr = 0;
-  new_handle->content_length = 0;
-  new_handle->content_received = 0;
-  new_handle->header = 0; 
+  /* new_handle->status = 0; */
+  /* new_handle->header_length = 0; */
+  /* new_handle->content_ptr = 0; */
+  /* new_handle->content_length = 0; */
+  /* new_handle->content_received = 0; */
+  /* new_handle->header = 0;  */
   
   return new_handle;
 }
@@ -1714,6 +1732,7 @@ int curl_multi_perform(struct http_msg_slist *multi_list)
 
   do
     {
+      /*http_get should be used here? TODO*/
       if(!http_process(temp->handle)) 	  /* Handle done doing it's job */
 	{
 	/* TODO: Add more flags here */
