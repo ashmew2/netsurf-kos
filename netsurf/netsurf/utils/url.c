@@ -787,14 +787,16 @@ url_func_result url_unescape(const char *str, char **result)
 {
 	char *curlstr;
 	char *retstr;
+	/* curlstr = curl_unescape(str, 0); */
 
-	curlstr = curl_unescape(str, 0);
+	curlstr = http_unescape_url(str);
+
 	if (curlstr == NULL) {
 		return URL_FUNC_NOMEM;
 	}
 
 	retstr = strdup(curlstr);
-	curl_free(curlstr);
+	free(curlstr);
 
 	if (retstr == NULL) {
 		return URL_FUNC_NOMEM;
