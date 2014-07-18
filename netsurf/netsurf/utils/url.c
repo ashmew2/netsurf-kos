@@ -31,18 +31,10 @@
 #include <unistd.h>
 
 #include "curl/curl.h"
-//#include "content/fetchers/http.c"
 #include "utils/config.h"
 #include "utils/log.h"
 #include "utils/url.h"
 #include "utils/utils.h"
-
-#ifdef DBG
-#undef DBG
-#endif
-//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
-#define DBG(s) LOG((s))            /* So that we see debug in Netsurf's LOG files */
-
 
 struct url_components_internal {
 	char *buffer;	/* buffer used for all the following data */
@@ -795,32 +787,11 @@ url_func_result url_unescape(const char *str, char **result)
 {
 	char *curlstr;
 	char *retstr;
-	char *address;	
-	
-	extern http_unescape_url();
-	DBG("Inside url_unescape()\n");
-	DBG("Address of () http_unescape_url : ");
-	
-	//	sprintf(address, "%x", http_unescape_url);
-	DBG(address);
-	DBG("\n");
 
-	DBG("Calling http_unescape_url() : \n");
-	curlstr = curl2_unescape(str, 0);
-	//curlstr = (char *)http_unescape_url(str);
-	DBG("Did not crash! \n");
-
+	curlstr = curl_unescape(str, 0);
 	if (curlstr == NULL) {
-	  DBG("curlstr is NULL!\n");	
-	  return URL_FUNC_NOMEM;
+		return URL_FUNC_NOMEM;
 	}
-	else
-	  { //Cheap hack for now sprintf
-	    DBG("curlstr is : ");
-	    sprintf(address, "%x", curlstr);
-	    DBG(address);
-	    DBG("\n");
-	  }
 
 	retstr = strdup(curlstr);
 	curl_free(curlstr);
@@ -850,8 +821,6 @@ url_func_result url_escape(const char *unescaped, size_t toskip,
 	size_t len;
 	char *escaped, *d, *tmpres;
 	const char *c;
-	
-	DBG("Inside url_escape() function");
 
 	if (!unescaped || !result)
 		return URL_FUNC_FAILED;
