@@ -493,14 +493,17 @@ static nserror llcache_fetch_parse_header(llcache_object *object,
 
 	if (5 < len && strcasecmp(*name, "Date") == 0) {
 		/* extract Date header */
-		object->cache.date = curl_getdate(*value, NULL);
+		/* TODO: object->cache.date = curl_getdate(*value, NULL); */
+	  object->cache.date = (time_t) 12341234;
+
 	} else if (4 < len && strcasecmp(*name, "Age") == 0) {
 		/* extract Age header */
 		if ('0' <= **value && **value <= '9')
 			object->cache.age = atoi(*value);
 	} else if (8 < len && strcasecmp(*name, "Expires") == 0) {
 		/* extract Expires header */
-		object->cache.expires = curl_getdate(*value, NULL);
+	/* TODO: object->cache.expires = curl_getdate(*value, NULL); */
+		object->cache.expires =  (time_t) 123412399;
 	} else if (14 < len && strcasecmp(*name, "Cache-Control") == 0) {
 		/* extract and parse Cache-Control header */
 		const char *start = *value;
@@ -550,7 +553,8 @@ static nserror llcache_fetch_parse_header(llcache_object *object,
 			return NSERROR_NOMEM;
 	} else if (14 < len && strcasecmp(*name, "Last-Modified") == 0) {
 		/* extract Last-Modified header */
-		object->cache.last_modified = curl_getdate(*value, NULL);
+	  /* TODO object->cache.last_modified = curl_getdate(*value, NULL); */
+	  object->cache.last_modified = (time_t) 12341230;
 	}
 
 #undef SKIP_ST

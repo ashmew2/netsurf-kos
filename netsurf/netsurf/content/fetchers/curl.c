@@ -66,7 +66,8 @@ Let the overall structure remain intact
  */
 #include <desktop/browser.h>
 
-#include "http.c"
+#include "http_msg.h"
+#include "http.h"
 
 /**********************************************************************
  ********This section added for resolving compile errors***************/
