@@ -1,6 +1,6 @@
 #define __stdcall __attribute__((stdcall))
 
-extern int (__stdcall http_init)(void);
+extern int (* __stdcall http_init)(void);
 extern unsigned int (* __stdcall http_get) (char * url, char * add_head); 
 extern int (* __stdcall http_process) (unsigned int identifier);
 extern void (* __stdcall http_free) (unsigned int identifier);

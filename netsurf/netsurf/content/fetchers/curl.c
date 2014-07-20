@@ -71,7 +71,7 @@ Let the overall structure remain intact
 
 /**********************************************************************
  ********This section added for resolving compile errors***************/
-
+#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
 #define CURL_ERROR_SIZE 100
 /*Definitions for CURL EASY Codes*/
 
@@ -231,7 +231,7 @@ void fetch_curl_register(void)
 	int i;
 	lwc_string *scheme;
 
-	LOG(("curl_version (no CURL XD) : %s", "call to curl_version() used to be here"));
+	LOG(("curl_version (no CURL XD)"));
 
 	/* code = curl_global_init(CURL_GLOBAL_ALL); */
 	/* if (code != CURLE_OK) */
@@ -250,15 +250,21 @@ void fetch_curl_register(void)
 	/* Create a curl easy handle with the options that are common to all
 	   fetches. */
 	
-	http_init();
+	/*HTTP Library initiated using volatime asm code in http.c */
+	DBG("Calling curl_easy_init\n");
+	/* fetch_blank_curl = curl_easy_init();  */
+	
+	/* if (!fetch_blank_curl) */
+	/*   { */
+	/*     DBG("fetch_blank_curl is NULL"); */
+	/*     die("Failed to initialise the fetch module " */
+	/* 	"(curl_easy_init failed)."); */
+	/*   } */
+	/* else */
+	/*   DBG("fetch_blank_curl is usable."); */
 
-	/*TODO: Initiating our http library. If something goes wrong, 
-	  it will automatically exit using kol_exit()*/
+	fetch_blank_curl = NULL;
 
-	fetch_blank_curl = curl_easy_init(); 
-	if (!fetch_blank_curl)
-		die("Failed to initialise the fetch module "
-				"(curl_easy_init failed).");
 	/* TODO: The SETOPT calls set up the parameters for the curl handle.
 	   Since we don't want to use curl, these are of no use, but our native handle 
 	   should consider all these fields while being set up for proper functioning

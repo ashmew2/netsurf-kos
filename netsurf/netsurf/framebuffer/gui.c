@@ -67,8 +67,8 @@
 #ifdef DBG
 #undef DBG
 #endif
-//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
-#define DBG(s) LOG((s))            /* So that we see debug in Netsurf's LOG files */
+#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+//#define DBG(s) LOG((s))            /* So that we see debug in Netsurf's LOG files */
 
 fbtk_widget_t *fbtk;
 
@@ -584,15 +584,18 @@ main(int argc, char** argv)
 
 	options = filepath_find(respaths, "Choices");
 	messages = filepath_find(respaths, "messages");
-
-	DBG("===path to msg\n");
+	LOG(("gui.c : printing kolibri DEBUG messages for BOARD"));
+	DBG("====================START\n");
 	DBG(messages);
-	DBG("\n===path to msg\n");
+	DBG("====================END\n");
 	
 	//netsurf_init(&argc, &argv, options, "res/messages");
-	netsurf_init(&argc, &argv, options, messages);
+	LOG(("Calling netsurf_init"));
+	netsurf_init(&argc, &argv, options, messages);	
 	extern HTTP_INIT();
+	DBG("Calling HTTP_INIT() for KolibriOS http lib..");
 	HTTP_INIT();
+	DBG(("NS HTTP_INIT okay"));
 	LOG(("NS init okay"));
 	
 	free(messages);
@@ -617,7 +620,6 @@ main(int argc, char** argv)
 
 	return 0;
 }
-
 
 void
 gui_poll(bool active)

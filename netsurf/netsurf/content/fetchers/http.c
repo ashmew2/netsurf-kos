@@ -31,6 +31,7 @@ int HTTP_YAY(){
 }
 
 int kol_exit(){
+  __menuet__debug_out("kol_exit()..Exiting..\n");
 	__menuet__sys_exit();
 }
 
@@ -49,8 +50,11 @@ if (http_init == NULL)
   __menuet__debug_out("http_init() is NULL. Exiting.\n");
   kol_exit();
   }
+ else
+   __menuet__debug_out("\nhttp_init() initialised properly.\n");
 
- http_get = ( __stdcall  unsigned int (*)(char*, char*)) 
+
+http_get = ( __stdcall  unsigned int (*)(char*, char*)) 
 		__kolibri__cofflib_getproc  (imp, "get");
 if (http_get == NULL)
   {

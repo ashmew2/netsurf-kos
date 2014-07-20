@@ -236,6 +236,7 @@ nserror netsurf_init(int *pargc,
 
 	js_initialise();
 
+	LOG(("Returning from netsurf_init()"));
 	return ret;
 }
 
