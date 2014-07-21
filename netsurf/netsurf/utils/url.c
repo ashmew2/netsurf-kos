@@ -795,7 +795,7 @@ url_func_result url_unescape(const char *str, char **result)
 	LOG(("url is %s\n", str));
 	
 	LOG(("Calling http_unescape_url in url.c\n"));
-	curlstr =  (char *)http_unescape_url(str);
+	curlstr =  http_unescape_url(str);
 	LOG(("http_unescape_url returned.\n"));
 	__menuet__debug_out("http_unescape_url returned\n");
 
@@ -807,7 +807,9 @@ url_func_result url_unescape(const char *str, char **result)
 	__menuet__debug_out("\n");
 
 	retstr = strdup(curlstr);
-	free(curlstr);
+	/* free(curlstr); */ /* Doesn't work because mem not allocated with malloc/calloc/realloc*/
+	/* TODO: Use mem_free here*/
+
 	__menuet__debug_out("After strdup in url.c\n");	
 
 	if (retstr == NULL) {
