@@ -1736,10 +1736,9 @@ int curl_multi_perform(struct http_msg_slist *multi_list)
 {
   struct http_msg_slist *temp = multi_list;
   struct http_msg_slist *temp_prev = temp;
-
-  do
-    {
-      /*http_get should be used here? TODO*/
+  LOG(("Inside curl_multi_perform"));
+  while(temp) {
+/*http_get should be used here? TODO*/
       if(!http_process(temp->handle)) 	  /* Handle done doing it's job */
 	{
 	/* TODO: Add more flags here */
@@ -1760,8 +1759,6 @@ int curl_multi_perform(struct http_msg_slist *multi_list)
       temp_prev = temp;
       temp = temp->next;
     }
-  while(temp!=NULL);
-
 }
 
 void curl_easy_cleanup(struct http_msg *handle)
