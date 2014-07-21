@@ -387,7 +387,7 @@ void fetch_curl_register(void)
 	  LOG(("Unable to register cURL fetcher for %s",
 	       "http"));
 	}       
-
+	DBG("fetch_curl_register returning.");	
 	return;
 
 curl_easy_setopt_failed:
@@ -403,6 +403,7 @@ curl_easy_setopt_failed:
 /* Seems to not need any work right now, curl_fetchers_registered variable seems handy*/
 bool fetch_curl_initialise(lwc_string *scheme)
 {
+  	DBG("fetch_curl_initialise().");
 	LOG(("Initialise cURL fetcher for %s", lwc_string_data(scheme)));
 	curl_fetchers_registered++;
 	return true; /* Always succeeds */
@@ -416,7 +417,7 @@ bool fetch_curl_initialise(lwc_string *scheme)
 void fetch_curl_finalise(lwc_string *scheme)
 {
 	struct cache_handle *h;
-
+	DBG("Inside fetch_curl_finalize..\n");
 	curl_fetchers_registered--;
 	LOG(("Finalise cURL fetcher %s", lwc_string_data(scheme)));
 	if (curl_fetchers_registered == 0) {
@@ -609,7 +610,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
         KOSHMcode codem;
 	unsigned int wererat;
 
-	fetch->curl_handle = handle;
+	/* fetch->curl_handle = handle; */
 	/* Don't need to add options to handle from http obj */
 	/* Initialise the handle */
 	/* code = fetch_curl_set_options(fetch); */
@@ -630,8 +631,22 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	  fetch_curl_abort(fetch);
 	  return NULL;
 	}
-	
+
+	DBG("Calling http_get with : ");
+	DBG(zz);
+	DBG("\n");
+
 	wererat = http_get(zz, NULL); /* Initiates the GET on the handle we want to initiate for */
+
+	if(wererart == 0)
+	  {
+	    DBG("Error. http_get failed.\n");
+	    getch_curl_abort(fetch);
+	    return NULL;
+	  }
+
+	fetch->curl_handle = (http_msg *)wererat;	
+	
 	codem.code = curl_multi_add_handle(fetch_curl_multi, fetch->curl_handle);
 	
 	/* Probably drop the assert and handle this properly, but that's for later */
@@ -1407,7 +1422,9 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	long http_code;
 	KOSHcode code;
 	fetch_msg msg;
-
+	
+	  DBG("Inside fetch_curl_process_headers..\n");
+	
 	f->had_headers = true;
 
 	if (!f->http_code)
@@ -1594,7 +1611,7 @@ fetch_curl_post_convert(const struct fetch_multipart_data *control)
 struct curl_slist *curl_slist_append(struct curl_slist * list, const char * string )
 {
   struct curl_slist *newnode = NULL;
-  
+    DBG("Inside curl_slist_append..\n");
   newnode = malloc(sizeof(struct curl_slist));
 
   if(newnode == NULL)
@@ -1624,6 +1641,7 @@ struct curl_slist *curl_slist_append(struct curl_slist * list, const char * stri
 void curl_slist_free_all(struct curl_slist *list)
 {
   struct curl_slist *temp = list;
+  DBG("Inside curl_slist_free_all..\n");
 
   while(list)
     {
@@ -1635,7 +1653,8 @@ void curl_slist_free_all(struct curl_slist *list)
 
 int curl_multi_add_handle(struct http_msg_slist *multi_handle, struct http_msg *new_handle)
 {  
-  
+  DBG("Inside curl_multi_add_handle..\n");
+
   if(multi_handle == NULL)
     {
       struct http_msg_slist *new_node = (struct http_msg_slist *)malloc(sizeof(struct http_msg_slist));
@@ -1676,10 +1695,12 @@ LTG
 
 struct http_msg_slist *curl_multi_remove_handle(struct http_msg_slist *multi_handle, struct http_msg *handle_to_delete)
 {
+  struct http_msg_slist *temp = multi_handle;
+
+  DBG("Inside curl_multi_remove_handle..\n");
+
   if(multi_handle == NULL || handle_to_delete == NULL)
     return multi_handle;
-
-  struct http_msg_slist *temp = multi_handle;
 
   if(temp->handle == handle_to_delete) /* special case for first node deletion */
     {      
