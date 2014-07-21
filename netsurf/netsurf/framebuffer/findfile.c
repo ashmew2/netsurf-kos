@@ -91,7 +91,7 @@ char *url_to_path(const char *url)
 	if (res != URL_FUNC_OK) {
 		return NULL;
 	}
-	LOG("Calling url_unescape from findfile.c");
+	__menuet__debug_out("Calling url_unescape from findfile.c");
 	res = url_unescape(path, &respath);
 	free(path);
 	if (res != URL_FUNC_OK) {
@@ -99,6 +99,7 @@ char *url_to_path(const char *url)
 	}
 
 LOG(("Findfile url2path: %s", respath));
+ __menuet__debug_out("returning from url_to_path in findfile.c\n");
 	return respath;
 }
 

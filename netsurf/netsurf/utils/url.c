@@ -797,20 +797,28 @@ url_func_result url_unescape(const char *str, char **result)
 	LOG(("Calling http_unescape_url in url.c\n"));
 	curlstr =  (char *)http_unescape_url(str);
 	LOG(("http_unescape_url returned.\n"));
+	__menuet__debug_out("http_unescape_url returned\n");
 
 	if (curlstr == NULL) {
 		return URL_FUNC_NOMEM;
 	}
-	
+	__menuet__debug_out("Calling strdup in url.c with : ");	
+	__menuet__debug_out(curlstr);
+	__menuet__debug_out("\n");
+
 	retstr = strdup(curlstr);
 	free(curlstr);
+	__menuet__debug_out("After strdup in url.c\n");	
 
 	if (retstr == NULL) {
+	  __menuet__debug_out("retstr is NULL in url.c\n");	
 		return URL_FUNC_NOMEM;
 	}
 
 	*result = retstr;
+	__menuet__debug_out("returning from url_unescape in url.c\n");
 	return URL_FUNC_OK;
+
 }
 
 /**

@@ -148,6 +148,7 @@ fetch_file_setup(struct fetch *fetchh,
 
 	ctx->url = nsurl_ref(url);
 
+	__menuet__debug_out("SCanning request headers in file.c\n");
 	/* Scan request headers looking for If-None-Match */
 	for (i = 0; headers[i] != NULL; i++) {
 		if (strncasecmp(headers[i], "If-None-Match:", 
@@ -168,7 +169,7 @@ fetch_file_setup(struct fetch *fetchh,
 	ctx->fetchh = fetchh;
 
 	RING_INSERT(ring, ctx);
-
+	__menuet__debug_out("returning from fetch_file_setup in  file.c\n");
 	return ctx;
 }
 
