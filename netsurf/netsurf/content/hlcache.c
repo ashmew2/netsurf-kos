@@ -220,7 +220,7 @@ void hlcache_finalise(void)
 /* See hlcache.h for documentation */
 nserror hlcache_poll(void)
 {
-
+  LOG(("hlcache_poll()\n"));
 	llcache_poll();
 
 	return NSERROR_OK;

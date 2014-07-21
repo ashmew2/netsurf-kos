@@ -91,7 +91,7 @@ char *url_to_path(const char *url)
 	if (res != URL_FUNC_OK) {
 		return NULL;
 	}
-
+	LOG("Calling url_unescape from findfile.c");
 	res = url_unescape(path, &respath);
 	free(path);
 	if (res != URL_FUNC_OK) {

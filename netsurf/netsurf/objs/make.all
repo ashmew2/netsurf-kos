@@ -22,7 +22,7 @@ OBJS = about.o base64.o bitmap_fbtk.o bitmap.o bmp.o box_construct.o \
     textplain.o throbber0.o throbber1.o throbber2.o throbber3.o \
     throbber4.o throbber5.o throbber6.o throbber7.o throbber8.o \
     thumb_ddesk.o thumbnail.o tree_ddesk.o tree.o tree_url_node.o \
-    urldb.o url.o useragent.o user.o utf8.o utils.o utils_utils.o \
+    urldb.o url.o useragent.o user.o utf8.o utils.o utils_utils.o\
     version.o window.o www-authenticate.o snprintf.o stubs.o divdi3.o
 
 LIBS += -lm -liconv  -lnsbmp -lnsgif -lpng -ljpeg -lz -lnsfb -lwapcaplet -lcss  -ldom -lhubbub -lparserutils -lfreetype2

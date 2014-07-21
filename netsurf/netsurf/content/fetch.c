@@ -520,7 +520,7 @@ void fetch_poll(void)
 {
 	scheme_fetcher *fetcher = fetchers;
 	scheme_fetcher *next_fetcher;
-
+	LOG(("fetch_poll()\n"));
 	fetch_dispatch_jobs();
 
 	if (!fetch_active)

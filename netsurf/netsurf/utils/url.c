@@ -788,8 +788,8 @@ url_func_result url_unescape(const char *str, char **result)
 	char *curlstr;
 	char *retstr;
 	/* curlstr = curl_unescape(str, 0); */
-
-	curlstr = http_unescape_url(str);
+	LOG(("Calling http_unescape_url in url.c\n"));
+	curlstr = (char *)http_unescape_url(str);
 
 	if (curlstr == NULL) {
 		return URL_FUNC_NOMEM;

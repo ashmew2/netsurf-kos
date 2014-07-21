@@ -206,7 +206,7 @@ static bool fetch_data_process(struct fetch_data_context *c)
         templen = c->datalen;
 	/* TODO: Replace unescaped = line with http.obj */
         /* unescaped = curl_easy_unescape(curl, comma + 1, 0, &templen); */
-
+	LOG(("Calling http_unescape_url in data.c\n"));
 	unescaped = http_unescape_url(comma + 1);
 	c->datalen = strlen(unescaped);
 
