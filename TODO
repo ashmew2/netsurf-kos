@@ -1,3 +1,7 @@
 ***Port Netsurf to KolibriOS
 **Improve build system.
 **Port Pthreads to KolibriOS in order to get rid of event looping polls in libnsfb events such as fill.
+
+Fix the utils/ and css/ make scripts inside netsurf to compile utils.c to css_utils.o and utils_utils.o respectively.
+
+Free assembly allocated stuff with mem_free which should be set up as an stdcall again to be used. DO NOT use free() with such allocations.
