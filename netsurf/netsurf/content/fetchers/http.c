@@ -17,7 +17,7 @@ unsigned int (* __stdcall http_get) (char * url, char * add_head); //yay, it's N
 int (* __stdcall http_process) (unsigned int identifier);
 void (* __stdcall http_free) (unsigned int identifier);
 char * (* __stdcall http_find_header_field) (struct http_msg *http_ahoy, char *field_name); //This is crazzzzzzyyyyyy
-unsigned int (* __stdcall http_unescape_url) (char *url_asciiz);
+char * (* __stdcall http_unescape_url) (char * url_asciiz);
 
 
 int HTTP_YAY(){
@@ -86,8 +86,8 @@ if (http_find_header_field == NULL)
     kol_exit();
   }
 
- http_unescape_url = ( __stdcall  unsigned int (*)(char *))
-   __kolibri__cofflib_getproc  (imp, "unescape");
+http_unescape_url = ( __stdcall  char *(*)(char *))
+  __kolibri__cofflib_getproc  (imp, "unescape");
 
 if(http_unescape_url == NULL)
   {

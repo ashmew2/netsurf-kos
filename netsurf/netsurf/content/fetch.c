@@ -534,6 +534,7 @@ void fetch_poll(void)
 		}
 		fetcher = next_fetcher;
 	}
+	LOG(("Returning from fetch_poll\n"));
 }
 
 

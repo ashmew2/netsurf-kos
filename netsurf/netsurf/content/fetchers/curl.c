@@ -959,11 +959,14 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 
 	/*TODO: Probably the best way is to combine both loops and use http_process to judge finished transfers*/
 	
+	LOG(("Inside fetch_curl_poll\n"));
 	/* do any possible work on the current fetches */
 	do {
 	  /* TODO: Replace curl_multi_perform function. This is the master function. */
 
-		codem.code = curl_multi_perform(fetch_curl_multi, &running);
+	  LOG(("Calling curl_multi_perform\n"));
+	  
+	  codem.code = curl_multi_perform(fetch_curl_multi, &running);
 		if (codem.code != CURLM_OK && codem.code != CURLM_CALL_MULTI_PERFORM) {
 		  /* 			LOG(("curl_multi_perform: %i %s", */
 		  /* 					codem, curl_multi_strerror(codem))); */
@@ -1003,6 +1006,7 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 		schedule(1, (schedule_callback_fn)fetch_curl_poll, fetch_curl_poll);
 	}
 #endif
+	LOG(("Returning froms fetch_curl_poll\n"));
 }
 
 

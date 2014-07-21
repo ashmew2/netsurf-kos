@@ -35,6 +35,9 @@
 #include "utils/log.h"
 #include "utils/url.h"
 #include "utils/utils.h"
+#include "content/fetchers/http_msg.h"
+#include "content/fetchers/http.h"
+
 
 struct url_components_internal {
 	char *buffer;	/* buffer used for all the following data */
@@ -788,13 +791,17 @@ url_func_result url_unescape(const char *str, char **result)
 	char *curlstr;
 	char *retstr;
 	/* curlstr = curl_unescape(str, 0); */
+	LOG(("Address of str is : %x\n", str));
+	LOG(("url is %s\n", str));
+	
 	LOG(("Calling http_unescape_url in url.c\n"));
-	curlstr = (char *)http_unescape_url(str);
+	curlstr =  (char *)http_unescape_url(str);
+	LOG(("http_unescape_url returned.\n"));
 
 	if (curlstr == NULL) {
 		return URL_FUNC_NOMEM;
 	}
-
+	
 	retstr = strdup(curlstr);
 	free(curlstr);
 

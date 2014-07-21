@@ -1639,6 +1639,8 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 #ifdef LLCACHE_TRACE
 	LOG(("Fetch event %d for %p", msg->type, object));
 #endif
+	if(!msg)
+	  LOG(("msg is NULL in llcache_fetch_callback\n"));
 
 	switch (msg->type) {
 	case FETCH_HEADER:
