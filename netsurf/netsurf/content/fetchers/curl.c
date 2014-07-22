@@ -110,12 +110,7 @@ typedef struct kosh_infotype kosh_infotype;
    char *data;
    struct curl_slist *next;
  };
-
-struct http_msg_slist {
-  struct http_msg *handle;
-  struct http_msg_slist *next;
-};
-
+ 
 /**********************************************************************/
 
 /* uncomment this to use scheduler based calling
@@ -160,7 +155,15 @@ struct cache_handle {
 	struct cache_handle *r_next; /**< Next cached handle in ring. */
 };
 
-struct http_msg_slist *fetch_curl_multi;		/**< Global cURL multi handle. */
+struct fetch_info_slist {
+  struct curl_fetch_info *fetch_info;  /* this fetch_info contains the same handle as the struct */
+  struct http_msg *handle;
+
+  struct fetch_info_slist *next;
+};
+
+
+struct fetch_info_slist *fetch_curl_multi;		/**< Global cURL multi handle. */
 
 /** Curl handle with default options set; not used for transfers. */
 static struct http_msg *fetch_blank_curl;
@@ -187,10 +190,10 @@ static KOSHcode fetch_curl_set_options(struct curl_fetch_info *f);
 /* static KOSHcode fetch_curl_sslctxfun(CURL *curl_handle, void *_sslctx, */
 /* 				     void *p); */
 static void fetch_curl_abort(void *vf);
-static void fetch_curl_stop(struct curl_fetch_info *f);
+static void fetch_curl_stop(struct fetch_info_slist *f);
 static void fetch_curl_free(void *f);
 static void fetch_curl_poll(lwc_string *scheme_ignored);
-static void fetch_curl_done(struct http_msg *curl_handle, int result);
+static void fetch_curl_done(struct fetch_info_slist *curl_handle);
 static int fetch_curl_progress(void *clientp, double dltotal, double dlnow,
 			       double ultotal, double ulnow);
 static int fetch_curl_ignore_debug(struct http_msg *handle,
@@ -214,9 +217,10 @@ static struct curl_httppost *fetch_curl_post_convert(
 /**************Functions added for replacing curl's provided functionality ************/
 struct curl_slist *curl_slist_append(struct curl_slist * list, const char * string ); 
 void curl_slist_free_all(struct curl_slist *);
-struct http_msg_slist *curl_multi_remove_handle(struct http_msg_slist *multi_handle, struct http_msg *handle_to_delete);
+struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi_handle, struct fetch_info_slist *handle_to_delete);
 struct http_msg * curl_easy_init(void);
 void curl_easy_cleanup(struct http_msg *handle);
+int curl_multi_add_handle(struct fetch_info_slist **multi_handle, struct curl_fetch_info *new_fetch_info);
 
 /**
  * Initialise the fetcher.
@@ -482,6 +486,8 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 	struct  curl_slist *slist;
 	int i;
 
+	DBG("Inside fetch_curl_setup()\n");
+	
 	fetch = malloc(sizeof (*fetch));
 	if (fetch == NULL)
 		return 0;
@@ -507,6 +513,7 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 	fetch->realm = NULL;
 	fetch->post_urlenc = NULL;
 	fetch->post_multipart = NULL;
+
 	if (post_urlenc)
 		fetch->post_urlenc = strdup(post_urlenc);
 	else if (post_multipart)
@@ -589,7 +596,9 @@ failed:
  */
 bool fetch_curl_start(void *vfetch)
 {
+  
 	struct curl_fetch_info *fetch = (struct curl_fetch_info*)vfetch;
+	DBG("Inside fetch_curl_start\n");
 	return fetch_curl_initiate_fetch(fetch,
 			fetch_curl_get_handle(fetch->host));
 }
@@ -608,7 +617,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 {
 	KOSHcode code; 
         KOSHMcode codem;
-	unsigned int wererat;
+	unsigned int wererat; /* Like soUrcerer wanted it :D */
 
 	/* fetch->curl_handle = handle; */
 	/* Don't need to add options to handle from http obj */
@@ -625,6 +634,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	/* add to the global curl multi handle */
 	char *zz;
 	int pr;
+	DBG("inside fetch_curl_initiate_fetch()...\n");
 	nsurl_get(fetch->url, NSURL_WITH_FRAGMENT, &zz, &pr);
 	
 	if (zz == NULL) {
@@ -638,16 +648,16 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 
 	wererat = http_get(zz, NULL); /* Initiates the GET on the handle we want to initiate for */
 
-	if(wererart == 0)
+	if(wererat == 0)               /* http_get failed. Something wrong. Can't do anything here  */
 	  {
 	    DBG("Error. http_get failed.\n");
-	    getch_curl_abort(fetch);
+	    fetch_curl_abort(fetch);
 	    return NULL;
 	  }
 
-	fetch->curl_handle = (http_msg *)wererat;	
+	fetch->curl_handle = (struct http_msg *)wererat;  /* Adding the http_msg handle to fetch->handle */
 	
-	codem.code = curl_multi_add_handle(fetch_curl_multi, fetch->curl_handle);
+	codem.code = curl_multi_add_handle(&fetch_curl_multi, fetch);
 	
 	/* Probably drop the assert and handle this properly, but that's for later */
 	assert(codem.code == CURLM_OK || codem.code == CURLM_CALL_MULTI_PERFORM);
@@ -667,6 +677,9 @@ struct http_msg *fetch_curl_get_handle(lwc_string *host)
 {
 	struct cache_handle *h;
 	struct http_msg *ret;
+
+	DBG("inside fetch_curl_get_handle()...\n");
+
 	RING_FINDBYLWCHOST(curl_handle_ring, h, host);
 	if (h) {
 		ret = h->handle;
@@ -692,6 +705,9 @@ void fetch_curl_cache_handle(struct http_msg *handle, lwc_string *host)
 {
 	struct cache_handle *h = 0;
 	int c;
+
+	DBG("inside fetch_curl_cache_handle...\n");
+
 	RING_FINDBYLWCHOST(curl_handle_ring, h, host);
 	if (h) {
 	  /*TODO: Replace curl_easy_cleanup function for something useful for use with KOSH*/
@@ -879,6 +895,7 @@ fetch_curl_sslctxfun(CURL *curl_handle, void *_sslctx, void *parm)
 void fetch_curl_abort(void *vf)
 {
 	struct curl_fetch_info *f = (struct curl_fetch_info *)vf;
+	DBG("inside fetch_curl_abort()...\n");
 	assert(f);
 	LOG(("fetch %p, url '%s'", f, nsurl_access(f->url)));
 	if (f->curl_handle) {
@@ -896,10 +913,15 @@ void fetch_curl_abort(void *vf)
  * Will prod the queue afterwards to allow pending requests to be initiated.
  */
 
-void fetch_curl_stop(struct curl_fetch_info *f)
+void fetch_curl_stop(struct fetch_info_slist *node)
 {
 	KOSHMcode codem;
-	/*TODO: Assert doesn't look like a safe option, but this is probably a fatal condition*/
+
+	/* TODO: Assert doesn't look like a safe option, but this is probably a fatal condition */
+
+	DBG("inside fetch_curl_stop()..\n");
+
+	struct curl_fetch_info *f = node->fetch_info;
 
 	assert(f);
 	LOG(("fetch %p, url '%s'", f, nsurl_access(f->url)));
@@ -908,8 +930,7 @@ void fetch_curl_stop(struct curl_fetch_info *f)
 		/* remove from curl multi handle */
 	  /*TODO: Need a replacement for curl_multi_remove_handle function*/
 
-		fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi,
-				f->curl_handle);
+		fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, node); /* Remove the node. More efficient  */
 		/* assert(codem.code == CURLM_OK); */
 		/* Put this curl handle into the cache if wanted. */
 		fetch_curl_cache_handle(f->curl_handle, f->host);
@@ -929,6 +950,7 @@ void fetch_curl_free(void *vf)
 {
 	struct curl_fetch_info *f = (struct curl_fetch_info *)vf;
 	int i;
+	DBG("inside fetch_curl_free()..\n");
 
 	if (f->curl_handle)
 		curl_easy_cleanup(f->curl_handle);
@@ -976,12 +998,13 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 	
 	LOG(("Inside fetch_curl_poll\n"));
 	/* do any possible work on the current fetches */
+
 	do {
 	  /* TODO: Replace curl_multi_perform function. This is the master function. */
 
-	  LOG(("Calling curl_multi_perform\n"));
+	  DBG(("Calling curl_multi_perform\n"));
 	  
-	  codem.code = curl_multi_perform(fetch_curl_multi, &running);
+	  codem.code = curl_multi_perform(fetch_curl_multi);
 		if (codem.code != CURLM_OK && codem.code != CURLM_CALL_MULTI_PERFORM) {
 		  /* 			LOG(("curl_multi_perform: %i %s", */
 		  /* 					codem, curl_multi_strerror(codem))); */
@@ -1034,21 +1057,23 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 /* TODO: curl_easy_getinfo needs a replacement for getting the status of things around
    SSL stuff needs to go away , as usual.
 */
-
-void fetch_curl_done(struct http_msg *curl_handle, int result)
+void fetch_curl_done(struct fetch_info_slist *node)
 {
 	fetch_msg msg;
 	bool finished = false;
 	bool error = false;
 	bool cert = false;
 	bool abort_fetch;
-	struct curl_fetch_info *f;
+	struct curl_fetch_info *f = node->fetch_info;
 	char **_hideous_hack = (char **) (void *) &f;
 	KOSHcode code;
-	
+	int result = CURLE_OK;
+
 	/* TODO: Remove this definition and get a better replacement for CURLINFO_PRIVATE */
 	
 	int CURLINFO_PRIVATE = 20;
+
+	DBG("inside fetch_curl_done()..\n");
 
 	/* struct cert_info certs[MAX_CERTS]; */
 	/* memset(certs, 0, sizeof(certs)); */
@@ -1101,7 +1126,7 @@ void fetch_curl_done(struct http_msg *curl_handle, int result)
 		error = true;
 	}
 
-	fetch_curl_stop(f);
+	fetch_curl_stop(node);
 
 	if (abort_fetch)
 		; /* fetch was aborted: no callback */
@@ -1220,6 +1245,8 @@ int fetch_curl_progress(void *clientp, double dltotal, double dlnow,
 	unsigned int time_now_cs;
 	fetch_msg msg;
 
+	DBG("inside fetch_curl_progress()..\n");
+
 	if (f->abort)
 		return 0;
 
@@ -1283,6 +1310,8 @@ size_t fetch_curl_data(char *data, size_t size, size_t nmemb,
 	KOSHcode code;
 	fetch_msg msg;
 
+	DBG("inside fetch_curl_data()..\n");
+
 	/* ensure we only have to get this information once */
 	if (!f->http_code)
 	{
@@ -1338,6 +1367,8 @@ size_t fetch_curl_header(char *data, size_t size, size_t nmemb,
 	int i;
 	fetch_msg msg;
 	size *= nmemb;
+
+	DBG("inside fetch_curl_header()..\n");
 
 	if (f->abort) {
 		f->stopped = true;
@@ -1423,7 +1454,7 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	KOSHcode code;
 	fetch_msg msg;
 	
-	  DBG("Inside fetch_curl_process_headers..\n");
+        DBG("Inside fetch_curl_process_headers..\n");
 	
 	f->had_headers = true;
 
@@ -1496,6 +1527,8 @@ fetch_curl_post_convert(const struct fetch_multipart_data *control)
 {
 	struct curl_httppost *post = 0, *last = 0;
 	/* TODO: CURLFORMcode code; */
+
+	DBG("inside fetch_curl_post_convert()..\n");
 
 	for (; control; control = control->next) {
 		if (control->file) {
@@ -1611,7 +1644,7 @@ fetch_curl_post_convert(const struct fetch_multipart_data *control)
 struct curl_slist *curl_slist_append(struct curl_slist * list, const char * string )
 {
   struct curl_slist *newnode = NULL;
-    DBG("Inside curl_slist_append..\n");
+  DBG("Inside curl_slist_append..\n");
   newnode = malloc(sizeof(struct curl_slist));
 
   if(newnode == NULL)
@@ -1651,35 +1684,40 @@ void curl_slist_free_all(struct curl_slist *list)
     }
 }
 
-int curl_multi_add_handle(struct http_msg_slist *multi_handle, struct http_msg *new_handle)
+int curl_multi_add_handle(struct fetch_info_slist **multi_handle, struct curl_fetch_info *new_fetch)
 {  
-  DBG("Inside curl_multi_add_handle..\n");
+  DBG("Inside curl_multi_add_handle..Adding handle\n");
 
-  if(multi_handle == NULL)
+  if(*multi_handle == NULL)
     {
-      struct http_msg_slist *new_node = (struct http_msg_slist *)malloc(sizeof(struct http_msg_slist));
+      struct fetch_info_slist *new_node = (struct fetch_info_slist *)malloc(sizeof(struct fetch_info_slist));
 
-      if(new_node == NULL || new_handle == NULL)
+      if(new_node == NULL || new_fetch == NULL)
 	return CURLM_FAILED;
-      new_node->handle = new_handle;      
-      multi_handle = new_node;                                                               
-      multi_handle->next = NULL;
+      
+      new_node->fetch_info = new_fetch;
+      new_node->handle = new_fetch->curl_handle;
+
+      *multi_handle = new_node;
+      (*multi_handle)->next = NULL;
     }
   else
     {
-      struct http_msg_slist *temp = multi_handle;
-      struct http_msg_slist *new_node = (struct http_msg_slist *)malloc(sizeof(struct http_msg_slist));
+      struct fetch_info_slist *temp = *multi_handle;
+      struct fetch_info_slist *new_node = (struct fetch_info_slist *)malloc(sizeof(struct fetch_info_slist));
 
-      if(new_node == NULL || new_handle == NULL)
+      if(new_node == NULL || new_fetch == NULL)
 	return CURLM_FAILED;
 
       while(temp->next)
 	{
 	  temp = temp->next;
 	}
-      new_node->handle = new_handle;
-      temp->next = new_node;
+
+      new_node->fetch_info = new_fetch;
+      new_node->handle = new_fetch->curl_handle;
       new_node->next = NULL;
+      temp->next = new_node;
     }
 
   return CURLM_OK;
@@ -1693,44 +1731,44 @@ int curl_multi_add_handle(struct http_msg_slist *multi_handle, struct http_msg *
 LTG
 */
 
-struct http_msg_slist *curl_multi_remove_handle(struct http_msg_slist *multi_handle, struct http_msg *handle_to_delete)
+struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi_handle, struct fetch_info_slist *node_to_delete)
 {
-  struct http_msg_slist *temp = multi_handle;
+  struct fetch_info_slist *temp = multi_handle;
 
   DBG("Inside curl_multi_remove_handle..\n");
 
-  if(multi_handle == NULL || handle_to_delete == NULL)
+  if(multi_handle == NULL || node_to_delete == NULL)
     return multi_handle;
 
-  if(temp->handle == handle_to_delete) /* special case for first node deletion */
+  if(temp == node_to_delete) /* special case for first node deletion */
     {      
       multi_handle = multi_handle->next;
-      free(temp);      
+      /* free(temp);       */ /* Probably shouldnt free. Let other routines free this TODO */
     }
   else /* If the data is present in any consecutive node */
     {
-      struct http_msg_slist *temp2 = multi_handle->next;
+      struct fetch_info_slist *temp2 = multi_handle->next;
       
       while(temp2)
 	{	  	  
-	  if(temp2->handle == handle_to_delete) 
+	  if(temp2 == node_to_delete) 
 	    {	      	      
 	      temp->next = temp2->next;
-	      free(temp2);
+	      /* free(temp2); */ /* Shouldnt free node here. Let others handle it (for cache etc). */
 	      break;
 	    }
 	  else
 	    {
 	      temp = temp2;
 	      temp2 = temp2->next;
-	    }	  
+	    }
 	}   
     }
 
   return multi_handle;
 }
 
-/* TODO: Get rid of the curl functions soon */
+/* TODO: Get rid of the curl functions soon DONE*/
 
  /* TODO: Actually a function to return a blank handle. The name is misleading right now */
 struct http_msg * curl_easy_init(void)
@@ -1757,19 +1795,24 @@ struct http_msg * curl_easy_init(void)
   return new_handle;
 }
 
-int curl_multi_perform(struct http_msg_slist *multi_list)
+int curl_multi_perform(struct fetch_info_slist *multi_list)
 {
-  struct http_msg_slist *temp = multi_list;
-  struct http_msg_slist *temp_prev = temp;
+  struct fetch_info_slist *temp = multi_list;
+  struct fetch_info_slist *temp_prev = temp;
+
   LOG(("Inside curl_multi_perform"));
+  DBG("inside curl_multi_perform()..\n");
+
   while(temp) {
 /*http_get should be used here? TODO*/
+    /* Should we check if handle is NULL? It was checked during init TODO */
       if(!http_process(temp->handle)) 	  /* Handle done doing it's job */
 	{
 	/* TODO: Add more flags here */
 	  if(temp->handle->flags & 4) /* FLAG_GOT_ALL_DATA is set */
 	    {
-	      fetch_curl_done(temp->handle, CURLE_OK);
+	      DBG("calling fetch_curl_done for node in curl.c\n");
+	      fetch_curl_done(temp);
 	    }	  
 	  /*TODO: Handle various conditions here, and set the status code accordingly when 
 	    calling fetch_curL_done
@@ -1784,6 +1827,7 @@ int curl_multi_perform(struct http_msg_slist *multi_list)
       temp_prev = temp;
       temp = temp->next;
     }
+  DBG("Leaving curl_multi_perform\n");
 }
 
 void curl_easy_cleanup(struct http_msg *handle)
