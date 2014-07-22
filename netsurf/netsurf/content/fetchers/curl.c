@@ -999,7 +999,7 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 	LOG(("Inside fetch_curl_poll\n"));
 	/* do any possible work on the current fetches */
 
-	do {
+	/* do { */
 	  /* TODO: Replace curl_multi_perform function. This is the master function. */
 
 	  DBG(("Calling curl_multi_perform\n"));
@@ -1016,7 +1016,7 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 
 			return;
 		}
-	} while (codem.code == CURLM_CALL_MULTI_PERFORM);
+	/* } while (codem.code == CURLM_CALL_MULTI_PERFORM); */
 
 	/* process curl results */
 	/*TODO: Needs to be replaced , no idea how to do it right now */
@@ -1453,10 +1453,14 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	long http_code;
 	KOSHcode code;
 	fetch_msg msg;
-	
-        DBG("Inside fetch_curl_process_headers..\n");
-	
+	char code_str[10];
+
 	f->had_headers = true;
+	sprintf(code_str, "%u", f->curl_handle->status);
+
+        DBG("Inside fetch_curl_process_headers..HTTP CODE : ");	
+	DBG(code_str);
+	DBG("\n");
 
 	if (!f->http_code)
 	  {
@@ -1466,14 +1470,13 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	    /* Replaced with this :  */
 
 	    f->http_code = f->curl_handle->status;
-
 	    fetch_set_http_code(f->fetch_handle, f->http_code);
 	    /* assert(code.code == CURLE_OK); */
 	}
 
 	http_code = f->http_code;
-	LOG(("HTTP status code %li", http_code));
-
+	LOG(("HTTP status code %li", http_code));	
+	
 	if (http_code == 304 && !f->post_urlenc && !f->post_multipart) {
 		/* Not Modified && GET request */
 		msg.type = FETCH_NOTMODIFIED;
@@ -1482,17 +1485,40 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	}
 
 	/* handle HTTP redirects (3xx response codes) */
-	if (300 <= http_code && http_code < 400 && f->location != 0) {
-		LOG(("FETCH_REDIRECT, '%s'", f->location));
-		msg.type = FETCH_REDIRECT;
-		msg.data.redirect = f->location;
-		fetch_send_callback(&msg, f->fetch_handle);
-		return true;
+	if (300 <= http_code && http_code < 400) {
+
+	  /* Converting the location header to a null terminated separate buffer */
+	  char *location = http_find_header_field(f->curl_handle, "location");
+	  char *i;
+	  for(i = location; !isspace(*i); i++);
+	  f->location = (char *)malloc(i - location + 1);	  
+	  strncpy(f->location, location, i - location);
+	  (f->location)[i - location] = '\0';
+	  /* End of conversion */
+
+	  DBG("f->location now is : ");
+	  DBG(f->location);
+	  DBG("\nEND OF LOCATION\n\n");
+
+	  if(f->location)
+	    {
+	      DBG("FETCH_REDIRECT\n");
+	      LOG(("FETCH_REDIRECT, '%s'", f->location));
+
+	      msg.type = FETCH_REDIRECT;
+	      msg.data.redirect = f->location;
+	      fetch_send_callback(&msg, f->fetch_handle);
+	      return true;
+	    }
+	  else
+	    DBG("f->location is NULL\n");
 	}
 
 	/* handle HTTP 401 (Authentication errors) */
 	if (http_code == 401) {
-		msg.type = FETCH_AUTH;
+	  DBG("FETCH_AUTH\n");
+	
+	  msg.type = FETCH_AUTH;
 		msg.data.auth.realm = f->realm;
 		fetch_send_callback(&msg, f->fetch_handle);
 		return true;
@@ -1502,6 +1528,7 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	if (f->only_2xx && strncmp(nsurl_access(f->url), "http", 4) == 0 &&
 			(http_code < 200 || 299 < http_code)) {
 		msg.type = FETCH_ERROR;
+		DBG("FETCH_ERROR\n");		
 		msg.data.error = messages_get("Not2xx");
 		fetch_send_callback(&msg, f->fetch_handle);
 		return true;
@@ -1509,6 +1536,8 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 
 	if (f->abort)
 		return true;
+
+	DBG("Returning false from fetch_curl_process_headers()\n");
 
 	return false;
 }
@@ -1826,7 +1855,8 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
       
       temp_prev = temp;
       temp = temp->next;
-    }
+  }
+  
   DBG("Leaving curl_multi_perform\n");
 }
 
