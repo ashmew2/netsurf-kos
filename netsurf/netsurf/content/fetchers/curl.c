@@ -111,7 +111,7 @@ typedef struct kosh_infotype kosh_infotype;
    struct curl_slist *next;
  };
  
-/**********************************************************************/
+/***********************XBCU***********************************************/
 
 /* uncomment this to use scheduler based calling
 #define FETCHER_CURLL_SCHEDULED 1
@@ -289,7 +289,7 @@ void fetch_curl_register(void)
 /* 	if (nsoption_bool(suppress_curl_debug)) */
 /* 		SETOPT(CURLOPT_DEBUGFUNCTION, fetch_curl_ignore_debug); */
 /* 	SETOPT(CURLOPT_WRITEFUNCTION, fetch_curl_data); */
-/* 	SETOPT(CURLOPT_HEADERFUNCTION, fetch_curl_header); */
+/* 	SETOPT(CURLOPT_HEADERFUNCTION, fetch_curl_header); */ /* Calling fetch_curl_header inside fetch_curl_process_headers */
 /* 	SETOPT(CURLOPT_PROGRESSFUNCTION, fetch_curl_progress); */
 /* 	SETOPT(CURLOPT_NOPROGRESS, 0); */
 /* 	SETOPT(CURLOPT_USERAGENT, user_agent_string()); */
@@ -618,22 +618,24 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	KOSHcode code; 
         KOSHMcode codem;
 	unsigned int wererat; /* Like soUrcerer wanted it :D */
-
+	char *zz;
+	int pr;
+	
 	/* fetch->curl_handle = handle; */
 	/* Don't need to add options to handle from http obj */
 	/* Initialise the handle */
-	/* code = fetch_curl_set_options(fetch); */
-	/* if (code.code != CURLE_OK) { */
-	/* 	fetch->curl_handle = 0; */
-	/* 	return false; */
-	/* } */
+	DBG("inside fetch_curl_initiate_fetch()...\n");
+	
+	code = fetch_curl_set_options(fetch); 
+	 if (code.code != CURLE_OK) { 
+	 	fetch->curl_handle = 0; 
+	 	return false; 
+	 } 
 
 	/* TODO : Write a curl_multi_add_handle alternative which puts the handle in our global queue
 	   for polling later on multiple transfers together*/
 
 	/* add to the global curl multi handle */
-	char *zz;
-	int pr;
 	DBG("inside fetch_curl_initiate_fetch()...\n");
 	nsurl_get(fetch->url, NSURL_WITH_FRAGMENT, &zz, &pr);
 	
@@ -760,6 +762,9 @@ fetch_curl_set_options(struct curl_fetch_info *f)
 {
 	KOSHcode code;
 	const char *auth;
+
+	DBG("Inside fetch_curl_set_options\n");
+	
 	/*TODO: Replace SETOPT with sane set up of parameters for our handle*/
 
 /* #undef SETOPT */
@@ -790,7 +795,10 @@ fetch_curl_set_options(struct curl_fetch_info *f)
 /* 		SETOPT(CURLOPT_HTTPGET, 1L); */
 /* 	} */
 
-/* 	f->cookie_string = urldb_get_cookie(f->url, true); */
+
+ 	f->cookie_string = urldb_get_cookie(f->url, true); 
+
+
 /* 	if (f->cookie_string) { */
 /* 		SETOPT(CURLOPT_COOKIE, f->cookie_string); */
 /* 	} else { */
@@ -1221,7 +1229,6 @@ void fetch_curl_done(struct fetch_info_slist *node)
 		} else {
 			msg.type = FETCH_SSL_ERR;
 		}
-
 		fetch_send_callback(&msg, f->fetch_handle);
 	}
 
@@ -1351,6 +1358,31 @@ size_t fetch_curl_data(char *data, size_t size, size_t nmemb,
 	return size * nmemb;
 }
 
+/**
+   Convertor function for converting a header field to its dedicated buffer 
+   Also terminates with a NULL character so that the string is safe for further use.
+
+   source -> Refers to the original data which needs to be copied into dest.
+   dest -> destination. This will be allocated using malloc in the function as size is determined here.1
+
+   dest uses a double pointer in order to allocate storage for the original pointer and not it's temporary copy.
+   
+**/
+
+void convert_to_asciiz(char *source, char **dest) 
+{  
+	char *i;
+
+	if(source == NULL)
+	  return;
+
+	for(i = source; !isspace(*i); i++);
+
+	*dest = (char *)malloc(i - source + 1);	  /* Allocate a big enough buffer with +1 for NULL character */
+	strncpy(dest, source, i - source);        /* Copy to buffer */
+	(f->location)[i - location] = '\0';
+	
+}
 
 /**
  * Callback function for headers.
@@ -1364,8 +1396,11 @@ size_t fetch_curl_header(char *data, size_t size, size_t nmemb,
 			 void *_f)
 {
 	struct curl_fetch_info *f = _f;
+	struct http_msg *handle = f->curl_handle;
+	char *temp; /*Remove me ? TODO*/
 	int i;
 	fetch_msg msg;
+
 	size *= nmemb;
 
 	DBG("inside fetch_curl_header()..\n");
@@ -1376,9 +1411,10 @@ size_t fetch_curl_header(char *data, size_t size, size_t nmemb,
 	}
 
 	msg.type = FETCH_HEADER;
-	msg.data.header_or_data.buf = (const uint8_t *) data;
-	msg.data.header_or_data.len = size;
-	fetch_send_callback(&msg, f->fetch_handle);
+	msg.data.header_or_data.buf = (const uint8_t *) handle->header;
+	msg.data.header_or_data.len = handle->header_length;
+
+	/* Add authenticate header and realm to this TODO */
 
 #define SKIP_ST(o) for (i = (o); i < (int) size && (data[i] == ' ' || data[i] == '\t'); i++)
 
@@ -1487,7 +1523,7 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	/* handle HTTP redirects (3xx response codes) */
 	if (300 <= http_code && http_code < 400) {
 
-	  /* Converting the location header to a null terminated separate buffer */
+	  /* Shifting this to other functionConverting the location header to a null terminated separate buffer */
 	  char *location = http_find_header_field(f->curl_handle, "location");
 	  char *i;
 	  for(i = location; !isspace(*i); i++);
@@ -1551,6 +1587,7 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 /*TODO : Not sure how to handle multipart data yet, but hopefully it'll be figured out soon*/
 /* TODO: Seems like the forms that are being created use sequential fields, so we can probably craft the same */
 /*   using post from http,obj */
+
 struct curl_httppost *
 fetch_curl_post_convert(const struct fetch_multipart_data *control)
 {
@@ -1835,10 +1872,10 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
   while(temp) {
 /*http_get should be used here? TODO*/
     /* Should we check if handle is NULL? It was checked during init TODO */
-      if(!http_process(temp->handle)) 	  /* Handle done doing it's job */
+      if(!http_process(temp->handle)) 	  /* Handle done doing it's job , http_process returned 0*/
 	{
-	/* TODO: Add more flags here */
-	  if(temp->handle->flags & 4) /* FLAG_GOT_ALL_DATA is set */
+	/* TODO: Add more flags here */	  
+	  if(temp->handle->flags & FLAG_GOT_ALL_DATA) /* FLAG_GOT_ALL_DATA is set */
 	    {
 	      DBG("calling fetch_curl_done for node in curl.c\n");
 	      fetch_curl_done(temp);
@@ -1851,6 +1888,10 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 	  
 	  /* The whole data recieved is shown by FLAG_GOT_ALL_DATA that is 1 SHL 2, meaning 4. Check for it right here. */
 	  
+	}
+      else  if (temp->handle->flags & FLAG_GOT_HEADER) /* Check if the headers were received. thanks hidnplayr :P */
+	{
+	  fetch_curl_header
 	}
       
       temp_prev = temp;
