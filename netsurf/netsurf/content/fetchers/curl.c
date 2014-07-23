@@ -1392,16 +1392,18 @@ void convert_to_asciiz(char *source, char **dest)
 
 /*TODO: Seems okay for now */
 
-size_t fetch_curl_header(char *data, size_t size, size_t nmemb,
+void fetch_curl_header(char *data, size_t size, size_t nmemb,
 			 void *_f)
 {
 	struct curl_fetch_info *f = _f;
 	struct http_msg *handle = f->curl_handle;
-	char *temp; /*Remove me ? TODO*/
+	char *realm = NULL; /*Remove me ? TODO*/
+	char *cookie = NULL;
+	int realm_start;
 	int i;
 	fetch_msg msg;
 
-	size *= nmemb;
+	/* size *= nmemb; */ /* ???? */
 
 	DBG("inside fetch_curl_header()..\n");
 
@@ -1414,67 +1416,97 @@ size_t fetch_curl_header(char *data, size_t size, size_t nmemb,
 	msg.data.header_or_data.buf = (const uint8_t *) handle->header;
 	msg.data.header_or_data.len = handle->header_length;
 
-	/* Add authenticate header and realm to this TODO */
+	fetch_send_callback(&msg, f->fetch_handle);
 
-#define SKIP_ST(o) for (i = (o); i < (int) size && (data[i] == ' ' || data[i] == '\t'); i++)
+	/* Remember to use lower case names for header field names for http.obj */
+	/* We extract only these fields */
+	convert_to_asciiz(http_find_header_field(f->curl_handle, "location"), &f->location);
+	convert_to_asciiz(http_find_header_field(f->curl_handle, "content-length"), &f->content_length);
+	convert_to_asciiz(http_find_header_field(f->curl_handle, "set-cookie"), &cookie);
+	convert_to_asciiz(http_find_header_field(f->curl_handle, "www-authenticate"), &realm);
 
-	if (12 < size && strncasecmp(data, "Location:", 9) == 0) {
-		/* extract Location header */
-		free(f->location);
-		f->location = malloc(size);
-		if (!f->location) {
-			LOG(("malloc failed"));
-			return size;
-		}
-		SKIP_ST(9);
-		strncpy(f->location, data + i, size - i);
-		f->location[size - i] = '\0';
-		for (i = size - i - 1; i >= 0 &&
-				(f->location[i] == ' ' ||
-				f->location[i] == '\t' ||
-				f->location[i] == '\r' ||
-				f->location[i] == '\n'); i--)
-			f->location[i] = '\0';
-	} else if (15 < size && strncasecmp(data, "Content-Length:", 15) == 0) {
-		/* extract Content-Length header */
-		SKIP_ST(15);
-		if (i < (int)size && '0' <= data[i] && data[i] <= '9')
-			f->content_length = atol(data + i);
-	} else if (17 < size && strncasecmp(data, "WWW-Authenticate:", 17) == 0) {
-		/* extract the first Realm from WWW-Authenticate header */
-		SKIP_ST(17);
+	/* Set appropriate fetch properties */
+	if(cookie!=NULL)
+		fetch_set_cookie(f->fetch_handle, cookie);
 
-		while (i < (int) size - 5 &&
-				strncasecmp(data + i, "realm", 5))
-			i++;
-		while (i < (int) size - 1 && data[++i] != '"')
-			/* */;
-		i++;
+	if(realm)
+	  {    
+	    /* For getting the realm, this was used as an example : ('WWW-Authenticate: Basic realm="My Realm"')  */	   
+	    
+	    for(i = 0 ; realm[i]; i++)
+	      if(realm[i] == '"') {
+		realm_start = i+1;
+		break;
+	      }		
+	    
+	    for(i = realm_start ; realm[i]; i++)
+	      if(realm[i] == '"') {
+		realm[i] = '\0';
+		break;
+	      }
+	   
+	    f->realm = realm;
+	  }	
+	
+/* #define SKIP_ST(o) for (i = (o); i < (int) size && (data[i] == ' ' || data[i] == '\t'); i++) */
 
-		if (i < (int) size) {
-			size_t end = i;
+/* 	if (12 < size && strncasecmp(data, "Location:", 9) == 0) { */
+/* 		/\* extract Location header *\/ */
+/* 		free(f->location); */
+/* 		f->location = malloc(size); */
+/* 		if (!f->location) { */
+/* 			LOG(("malloc failed")); */
+/* 			return size; */
+/* 		} */
+/* 		SKIP_ST(9); */
+/* 		strncpy(f->location, data + i, size - i); */
+/* 		f->location[size - i] = '\0'; */
+/* 		for (i = size - i - 1; i >= 0 && */
+/* 				(f->location[i] == ' ' || */
+/* 				f->location[i] == '\t' || */
+/* 				f->location[i] == '\r' || */
+/* 				f->location[i] == '\n'); i--) */
+/* 			f->location[i] = '\0'; */
+/* 	} else if (15 < size && strncasecmp(data, "Content-Length:", 15) == 0) { */
+/* 		/\* extract Content-Length header *\/ */
+/* 		SKIP_ST(15); */
+/* 		if (i < (int)size && '0' <= data[i] && data[i] <= '9') */
+/* 			f->content_length = atol(data + i); */
+/* 	} else if (17 < size && strncasecmp(data, "WWW-Authenticate:", 17) == 0) { */
+/* 		/\* extract the first Realm from WWW-Authenticate header *\/ */
+/* 		SKIP_ST(17); */
 
-			while (end < size && data[end] != '"')
-				++end;
+/* 		while (i < (int) size - 5 && */
+/* 				strncasecmp(data + i, "realm", 5)) */
+/* 			i++; */
+/* 		while (i < (int) size - 1 && data[++i] != '"') */
+/* 			/\* *\/; */
+/* 		i++; */
 
-			if (end < size) {
-				free(f->realm);
-				f->realm = malloc(end - i + 1);
-				if (f->realm != NULL) {
-					strncpy(f->realm, data + i, end - i);
-					f->realm[end - i] = '\0';
-				}
-			}
-		}
-	} else if (11 < size && strncasecmp(data, "Set-Cookie:", 11) == 0) {
-		/* extract Set-Cookie header */
-		SKIP_ST(11);
+/* 		if (i < (int) size) { */
+/* 			size_t end = i; */
 
-		fetch_set_cookie(f->fetch_handle, &data[i]);
-	}
+/* 			while (end < size && data[end] != '"') */
+/* 				++end; */
 
-	return size;
-#undef SKIP_ST
+/* 			if (end < size) { */
+/* 				free(f->realm); */
+/* 				f->realm = malloc(end - i + 1); */
+/* 				if (f->realm != NULL) { */
+/* 					strncpy(f->realm, data + i, end - i); */
+/* 					f->realm[end - i] = '\0'; */
+/* 				} */
+/* 			} */
+/* 		} */
+/* 	} else if (11 < size && strncasecmp(data, "Set-Cookie:", 11) == 0) { */
+/* 		/\* extract Set-Cookie header *\/ */
+/* 		SKIP_ST(11); */
+
+/* 		fetch_set_cookie(f->fetch_handle, &data[i]); */
+/* 	} */
+
+/* 	return size; */
+/* #undef SKIP_ST */
 }
 
 /**
