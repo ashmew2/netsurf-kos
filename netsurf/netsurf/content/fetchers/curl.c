@@ -71,7 +71,8 @@ Let the overall structure remain intact
 
 /**********************************************************************
  ********This section added for resolving compile errors***************/
-#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+//#define DBG(s) __menuet__debug_out(s) /* For the debug messages in BOARD */
+#define DBG(s) LOG((s))
 #define CURL_ERROR_SIZE 100
 /*Definitions for CURL EASY Codes*/
 
@@ -86,8 +87,6 @@ Let the overall structure remain intact
 #define CURLM_CALL_MULTI_PERFORM -1
 #define CURLM_FAILED 123123
 /* KOSH stands for KolibriOS HTTP :) */
-
-/* For the flags in the http_msg struct above  */
 
 int FLAG_HTTP11             = 1 << 0;
 int FLAG_GOT_HEADER         = 1 << 1;
@@ -222,7 +221,7 @@ static size_t fetch_curl_data(char *data, size_t size, size_t nmemb,
 			      void *_f);
 /* static size_t fetch_curl_header(char *data, size_t size, size_t nmemb, */
 /* 				void *_f); */
-void fetch_curl_header(void *_f);
+void fetch_curl__header(void *_f);
 static bool fetch_curl_process_headers(struct curl_fetch_info *f);
 static struct curl_httppost *fetch_curl_post_convert(
 		const struct fetch_multipart_data *control);
@@ -235,7 +234,7 @@ static struct curl_httppost *fetch_curl_post_convert(
 /**************Functions added for replacing curl's provided functionality ************/
 struct curl_slist *curl_slist_append(struct curl_slist * list, const char * string ); 
 void curl_slist_free_all(struct curl_slist *);
-struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi_handle, struct fetch_info_slist *handle_to_delete);
+struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi_handle, struct curl_fetch_info *fetch_to_delete);
 struct http_msg * curl_easy_init(void);
 void curl_easy_cleanup(struct http_msg *handle);
 int curl_multi_add_handle(struct fetch_info_slist **multi_handle, struct curl_fetch_info *new_fetch_info);
@@ -654,7 +653,9 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	   for polling later on multiple transfers together*/
 
 	/* add to the global curl multi handle */
+
 	DBG("inside fetch_curl_initiate_fetch()...\n");
+
 	nsurl_get(fetch->url, NSURL_WITH_FRAGMENT, &zz, &pr);
 	
 	if (zz == NULL) {
@@ -665,9 +666,12 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	DBG("Calling http_get with : ");
 	DBG(zz);
 	DBG("\n");
+	DBG("\n");
 
+	/*TODO : Always clear the flags for the handle here*/	
+	
 	wererat = http_get(zz, NULL); /* Initiates the GET on the handle we want to initiate for */
-
+	
 	if(wererat == 0)               /* http_get failed. Something wrong. Can't do anything here  */
 	  {
 	    DBG("Error. http_get failed.\n");
@@ -676,6 +680,8 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	  }
 
 	fetch->curl_handle = (struct http_msg *)wererat;  /* Adding the http_msg handle to fetch->handle */
+
+	LOG(("wererat is %u with flags = %u", wererat, fetch->curl_handle->flags));
 	
 	codem.code = curl_multi_add_handle(&fetch_curl_multi, fetch);
 	
@@ -924,6 +930,9 @@ void fetch_curl_abort(void *vf)
 	DBG("inside fetch_curl_abort()...\n");
 	assert(f);
 	LOG(("fetch %p, url '%s'", f, nsurl_access(f->url)));
+
+	fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, f);
+
 	if (f->curl_handle) {
 		f->abort = true;
 	} else {
@@ -955,8 +964,8 @@ void fetch_curl_stop(struct fetch_info_slist *node)
 	if (f->curl_handle) {
 		/* remove from curl multi handle */
 	  /*TODO: Need a replacement for curl_multi_remove_handle function*/
-
-		fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, node); /* Remove the node. More efficient  */
+	  
+		fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, f); /* Remove the node. More efficient  */
 		/* assert(codem.code == CURLM_OK); */
 		/* Put this curl handle into the cache if wanted. */
 		fetch_curl_cache_handle(f->curl_handle, f->host);
@@ -1410,7 +1419,7 @@ void convert_to_asciiz(char *source, char **dest)
 
 /*TODO: Seems okay for now */
 
-void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
+void fetch_curl__header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 {
 	struct curl_fetch_info *f = _f;
 	struct http_msg *handle = f->curl_handle;
@@ -1423,7 +1432,7 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 	/* size *= nmemb; */ /* ???? */
 
-	DBG("inside fetch_curl_header()..\n");
+	DBG("inside fetch_curl__header()..\n");
 
 	if (f->abort) {
 		f->stopped = true;
@@ -1433,8 +1442,9 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	msg.type = FETCH_HEADER;
 	msg.data.header_or_data.buf = (const uint8_t *) &(handle->header);
 	msg.data.header_or_data.len = handle->header_length;
-
+	LOG(("Calling fetch_send_callback from fetch_curl_header"));
 	fetch_send_callback(&msg, f->fetch_handle);
+	LOG(("AFTER Calling fetch_send_callback from fetch_curl_header"));	
 
 	/* Remember to use lower case names for header field names for http.obj */
 	/* We extract only these fields */
@@ -1850,18 +1860,20 @@ int curl_multi_add_handle(struct fetch_info_slist **multi_handle, struct curl_fe
 LTG
 */
 
-struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi_handle, struct fetch_info_slist *node_to_delete)
+/* struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi_handle, struct fetch_info_slist *node_to_delete) */
+struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi_handle, struct curl_fetch_info *fetch_to_delete)
 {
   struct fetch_info_slist *temp = multi_handle;
 
   DBG("Inside curl_multi_remove_handle..\n");
 
-  if(multi_handle == NULL || node_to_delete == NULL)
+  if(multi_handle == NULL || fetch_to_delete == NULL)
     return multi_handle;
 
-  if(temp == node_to_delete) /* special case for first node deletion */
+  if(temp->fetch_info == fetch_to_delete) /* special case for first node deletion */
     {      
       multi_handle = multi_handle->next;
+      DBG("Removed handle\n");
       /* free(temp);       */ /* Probably shouldnt free. Let other routines free this TODO */
     }
   else /* If the data is present in any consecutive node */
@@ -1870,10 +1882,11 @@ struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi
       
       while(temp2)
 	{	  	  
-	  if(temp2 == node_to_delete) 
+	  if(temp2->fetch_info == fetch_to_delete) 
 	    {	      	      
 	      temp->next = temp2->next;
 	      /* free(temp2); */ /* Shouldnt free node here. Let others handle it (for cache etc). */
+	      DBG("Removed handle\n");
 	      break;
 	    }
 	  else
@@ -1883,7 +1896,7 @@ struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi
 	    }
 	}   
     }
-
+  /*TODO : http_free should be called here?*/
   return multi_handle;
 }
 
@@ -1932,6 +1945,7 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 	    {
 	      DBG("calling fetch_curl_done for node in curl.c\n");
 	      fetch_curl_done(temp);
+	      /* Probably be fetch_curl_data?*/
 	    }	  
 	  /*TODO: Handle various conditions here, and set the status code accordingly when 
 	    calling fetch_curL_done
@@ -1944,7 +1958,12 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 	}
       else  if (temp->handle->flags & FLAG_GOT_HEADER) /* Check if the headers were received. thanks hidnplayr :P */
 	{
-	  fetch_curl_header(temp->fetch_info);
+	  LOG(("[wererat]flags inside perform() on handle (%u): %u", temp->handle, temp->handle->flags));
+	  DBG("Calling fetch_curl_header");
+	  if(!temp->fetch_info->had_headers)
+	    fetch_curl__header(temp->fetch_info);
+	  else
+	    LOG(("fetch already had headers, not calling fetch_curl_header"));
 	}
       
       temp_prev = temp;
