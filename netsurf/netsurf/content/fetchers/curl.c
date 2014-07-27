@@ -704,7 +704,7 @@ struct http_msg *fetch_curl_get_handle(lwc_string *host)
 	struct http_msg *ret;
 
 	DBG("inside fetch_curl_get_handle()...\n");
-
+	
 	RING_FINDBYLWCHOST(curl_handle_ring, h, host);
 	if (h) {
 		ret = h->handle;
@@ -713,9 +713,10 @@ struct http_msg *fetch_curl_get_handle(lwc_string *host)
 		free(h);
 	} else {
 	  /* ret = curl_easy_duphandle(fetch_blank_curl); */
-	/* TODO: Verify if this is equivalent to curl_easy_duphandle call above this */
+	  /* TODO: Verify if this is equivalent to curl_easy_duphandle call above this */
 	  ret = curl_easy_init();
 	}
+	
 	return ret;
 }
 
@@ -1344,7 +1345,13 @@ size_t fetch_curl_data(void *_f)
 	fetch_msg msg;
 
 	DBG("inside fetch_curl_data()..\n");
-	LOG(("Will be Setting HTTP Code to : %u", f->curl_handle->status));
+
+	/* if(f->curl_handle) */
+	/*   LOG(("curl_handle is not NULL\n")); */
+	/* else */
+	/*   LOG(("curl_handle is NULL\n")); */
+
+	LOG(("Will be Setting HTTP Code to : %u\n", f->curl_handle->status));	
 	
 	/* ensure we only have to get this information once */
 	if (!f->http_code)
@@ -1353,14 +1360,29 @@ size_t fetch_curl_data(void *_f)
 		   http_msg struct should have this info available for query.
 
 		   code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
-		/* 			 &f->http_code); */	  
-	  LOG(("Setting HTTP Code to : %u", f->curl_handle->status));
-		fetch_set_http_code(f->fetch_handle, f->curl_handle->status);
-		assert(code.code == CURLE_OK);
+		/* 			 &f->http_code); */	  	  
+	  __menuet__debug_out("f->http_code is 0");
+	  LOG(("f->http_code was 0\n"));
+
+	  f->http_code = f->curl_handle->status;
+	  fetch_set_http_code(f->fetch_handle, f->http_code);
+
+	  /* assert(code.code == CURLE_OK); */
 	}
+	else
+	  {
+	    f->http_code = f->curl_handle->status;
+	    fetch_set_http_code(f->fetch_handle, f->http_code);	  
+	  }
+	__menuet__debug_out("foobar asuidhaisudhaiusdhaiu-=-=-=-=-=-=-\n");
+	
+	LOG(("fetch->http_code is  : %ld\n", f->http_code));
+
+	__menuet__debug_out("foobar asuidhaisudhaiusdhaiu-=-=-=-=-=-=-\n");
 
 	/* ignore body if this is a 401 reply by skipping it and reset
 	   the HTTP response code to enable follow up fetches */
+
 	if (f->http_code == 401)
 	{
 		f->http_code = 0;
@@ -1369,7 +1391,7 @@ size_t fetch_curl_data(void *_f)
 
 	if (f->abort || (!f->had_headers && fetch_curl_process_headers(f))) {
 	  f->stopped = true;
-		return 0;
+	  return 0;
 	}
 
 	/* send data to the caller */
@@ -1441,17 +1463,21 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 		return;
 	}
 
+	f->http_code = handle->status;
+	fetch_set_http_code(f->fetch_handle, f->http_code);
+
+	LOG(("fetch->http_code is  : %ld\n", f->http_code));
+
 	msg.type = FETCH_HEADER;
 	msg.data.header_or_data.buf = (const uint8_t *) &(handle->header);
 	msg.data.header_or_data.len = handle->header_length;
 	LOG(("Calling fetch_send_callback from fetch_curl_header"));
 	fetch_send_callback(&msg, f->fetch_handle);
 	LOG(("AFTER Calling fetch_send_callback from fetch_curl_header"));	
-
+	
 	/* Remember to use lower case names for header field names for http.obj */
 	/* We extract only these fields */
 	convert_to_asciiz(http_find_header_field(f->curl_handle, "location"), &f->location);
-
 	convert_to_asciiz(http_find_header_field(f->curl_handle, "content-length"), &content_length);
 	convert_to_asciiz(http_find_header_field(f->curl_handle, "set-cookie"), &cookie);
 	convert_to_asciiz(http_find_header_field(f->curl_handle, "www-authenticate"), &realm);
@@ -1481,6 +1507,10 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	   
 	    f->realm = realm;
 	  }	
+
+	LOG(("fetch->http_code is  ( AT THE END of f_c_header): %ld\n", f->http_code));
+	/* f->http_code = handle->status; */
+	/* fetch_set_http_code(f->fetch_handle, f->http_code); */
 	
 /* #define SKIP_ST(o) for (i = (o); i < (int) size && (data[i] == ' ' || data[i] == '\t'); i++) */
 
@@ -1554,34 +1584,34 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 {
 	long http_code;
 	KOSHcode code;
-	fetch_msg msg;
-	char code_str[10];
+	fetch_msg msg;	
 
-	f->had_headers = true;
-	sprintf(code_str, "%u", f->curl_handle->status);
-
-        DBG("Inside fetch_curl_process_headers..HTTP CODE : ");	
-	DBG(code_str);
-	DBG("\n");
+	f->had_headers = true;        
+	
+	http_code = f->curl_handle->status;
+	LOG(("Inside fetch_curl_process_headers..HTTP CODE : %ld\n", http_code));
+	__menuet__debug_out("3333foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
 
 	if (!f->http_code)
 	  {
 	  /* TODO: Handle this like another similar piece of code in the file with HTTP_CODE_CURLINFO */
-		/* code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
-		/* 			 &f->http_code); */
+	    /* code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
+	    /* 			 &f->http_code); */
 	    /* Replaced with this :  */
-
-	    f->http_code = f->curl_handle->status;
+	    /* Have a fetch_set_http_code here? TODO*/
+	    
+	    f->http_code = http_code;
 	    fetch_set_http_code(f->fetch_handle, f->http_code);
 	    /* assert(code.code == CURLE_OK); */
 	}
 
-	http_code = f->http_code;
-	LOG(("HTTP status code %li", http_code));	
-	
+	LOG(("HTTP status code %li\n", http_code));	
+	__menuet__debug_out("4444foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
+		
 	if (http_code == 304 && !f->post_urlenc && !f->post_multipart) {
 		/* Not Modified && GET request */
 		msg.type = FETCH_NOTMODIFIED;
+		__menuet__debug_out("555foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
 		fetch_send_callback(&msg, f->fetch_handle);
 		return true;
 	}
@@ -1590,7 +1620,7 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	if (300 <= http_code && http_code < 400) {
 	  
 	  LOG(("FETCH_REDIRECT, '%s'", f->location));
-	  
+	  __menuet__debug_out("6666foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
 	  msg.type = FETCH_REDIRECT;
 	  msg.data.redirect = f->location;
 	  fetch_send_callback(&msg, f->fetch_handle);
@@ -1921,39 +1951,43 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
   while(temp) {
 /*http_get should be used here? TODO*/
     /* Should we check if handle is NULL? It was checked during init TODO */
-    LOG(("Flags for temp in curL_multi_perform : %u", temp->handle->flags));
+    int process_status = http_process(temp->handle);
+
+    LOG(("Flags for temp in curL_multi_perform : %u\n", temp->handle->flags));
+
     if ((temp->handle->flags & FLAG_GOT_HEADER) && (!temp->fetch_info->had_headers)) /* Check if the headers were received. thanks hidnplayr :P */
-	{
-	  LOG(("[wererat]flags inside perform() on handle (%u): %u", temp->handle, temp->handle->flags));
-	  DBG("Calling fetch_curl_header");
-
-	  if(!temp->fetch_info->had_headers)
-	    fetch_curl_header(temp->fetch_info);
-	  else
-	    LOG(("fetch already had headers, not calling fetch_curl_header"));
-	}
-    else if(!http_process(temp->handle)) 	  /* Handle done doing it's job , http_process returned 0*/
-	{
+      {
+	LOG(("[wererat]flags inside perform() on handle (%u): %u\n", temp->handle, temp->handle->flags));
+	DBG("Calling fetch_curl_header\n");
+	
+	if(!temp->fetch_info->had_headers)
+	  fetch_curl_header(temp->fetch_info);
+	else
+	  LOG(("fetch already had headers, not calling fetch_curl_header"));
+      }
+    
+    if(process_status == 0) 	  /* Handle done doing it's job , http_process returned 0*/
+      {
 	/* TODO: Add more flags here */	  
-	  if(temp->handle->flags & FLAG_GOT_ALL_DATA) /* FLAG_GOT_ALL_DATA is set */
-	    {
-	      DBG("calling fetch_curl_data in curl_multi_perform\n");
-	      LOG(("content in handle is : %s", temp->handle->content_ptr));
-	      fetch_curl_data(temp);	      
-	    }	  
-	  /*TODO: Handle various conditions here, and set the status code accordingly when 
-	    calling fetch_curL_done
-	  */
-	  
-	  /* TODO: Probably decide the condition of the fetch here */
-	  
-	  /* The whole data recieved is shown by FLAG_GOT_ALL_DATA that is 1 SHL 2, meaning 4. Check for it right here. */	  
-	}
-      
-      temp_prev = temp;
-      temp = temp->next;
+	if(temp->handle->flags & FLAG_GOT_ALL_DATA) /* FLAG_GOT_ALL_DATA is set */
+	  {
+	    DBG("calling fetch_curl_data in curl_multi_perform\n");
+	    /* LOG(("content in handle is : %s", temp->handle->content_ptr)); */
+	    fetch_curl_data(temp);	      
+	  }	  
+	/*TODO: Handle various conditions here, and set the status code accordinpgly when 
+	  calling fetch_curL_done
+	*/
+	
+	/* TODO: Probably decide the condition of the fetch here */
+	
+	/* The whole data recieved is shown by FLAG_GOT_ALL_DATA that is 1 SHL 2, meaning 4. Check for it right here. */	  
+      }
+    
+    temp_prev = temp;
+    temp = temp->next;
   }
-
+  
   DBG("Leaving curl_multi_perform\n");
 }
 
