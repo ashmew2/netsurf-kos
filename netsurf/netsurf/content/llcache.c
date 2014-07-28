@@ -1644,7 +1644,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 
 	switch (msg->type) {
 	case FETCH_HEADER:
-	  DBG("FETCH_HEADER\n");
+	  DBG("FETCH_HEADER in llcache\n");
 		/* Received a fetch header */
 		object->fetch.state = LLCACHE_FETCH_HEADERS;
 
@@ -1656,7 +1656,8 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	/* 3xx responses */
 	case FETCH_REDIRECT:
 		/* Request resulted in a redirect */
-	  DBG("FETCH_REDIRECT\n");
+	  DBG("FETCH_REDIRECT in llcache\n");
+	  __menuet__debug_out("8888foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
 		/* Release candidate, if any */
 		if (object->candidate != NULL) {
 			object->candidate->candidate_count--;
@@ -1668,13 +1669,13 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 		break;
 	case FETCH_NOTMODIFIED:
 		/* Conditional request determined that cached object is fresh */
-	  	  DBG("FETCH_NOTMODIFIED\n");
+	  	  DBG("FETCH_NOTMODIFIED in llcache\n");
 		error = llcache_fetch_notmodified(object, &object);
 		break;
 
 	/* Normal 2xx state machine */
 	case FETCH_DATA:
-	  	  DBG("FETCH_DATA\n");
+	  	  DBG("FETCH_DATA in llcache\n");
 		/* Received some data */
 		if (object->fetch.state != LLCACHE_FETCH_DATA) {
 			/* On entry into this state, check if we need to 
@@ -1717,7 +1718,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	{
 		uint8_t *temp;
 
-		DBG("FETCH_FINISHED\n");
+		DBG("FETCH_FINISHED in llcache\n");
 		object->fetch.state = LLCACHE_FETCH_COMPLETE;
 		object->fetch.fetch = NULL;
 
@@ -1738,7 +1739,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	case FETCH_ERROR:
 		/* An error occurred while fetching */
 		/* The fetch has has already been cleaned up by the fetcher */
-	  	  DBG("FETCH_ERROR\n");
+	  	  DBG("FETCH_ERROR in llcache\n");
 		object->fetch.state = LLCACHE_FETCH_COMPLETE;
 		object->fetch.fetch = NULL;
 
@@ -1760,7 +1761,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 		
 		break;
 	case FETCH_PROGRESS:
-	  	  DBG("FETCH_PROGRESS\n");
+	  	  DBG("FETCH_PROGRESS in llcache\n");
 		/* Progress update */
 		event.type = LLCACHE_EVENT_PROGRESS;
 		event.data.msg = msg->data.progress;

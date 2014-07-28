@@ -1388,7 +1388,7 @@ size_t fetch_curl_data(void *_f)
 		f->http_code = 0;
 		/* return size * nmemb; */
 	}
-
+	
 	if (f->abort || (!f->had_headers && fetch_curl_process_headers(f))) {
 	  f->stopped = true;
 	  return 0;
