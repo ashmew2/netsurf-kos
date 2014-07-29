@@ -174,7 +174,7 @@ struct cache_handle {
 struct fetch_info_slist {
   struct curl_fetch_info *fetch_info;  /* this fetch_info contains the same handle as the struct */
   struct http_msg *handle;
-
+  bool fetch_curl_header_called;
   struct fetch_info_slist *next;
 };
 
@@ -1582,7 +1582,7 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 bool fetch_curl_process_headers(struct curl_fetch_info *f)
 {
-	long http_code;
+  long http_code;
 	KOSHcode code;
 	fetch_msg msg;	
 
@@ -1834,12 +1834,12 @@ int curl_multi_add_handle(struct fetch_info_slist **multi_handle, struct curl_fe
     {
       struct fetch_info_slist *new_node = (struct fetch_info_slist *)malloc(sizeof(struct fetch_info_slist));
 
-      if(new_node == NULL || new_fetch == NULL)
+      if(new_node == NULL || new_fetch == NULL) //add failture for malloc here TODO
 	return CURLM_FAILED;
       
       new_node->fetch_info = new_fetch;
       new_node->handle = new_fetch->curl_handle;
-
+      new_node->fetch_curl_header_called = false;
       *multi_handle = new_node;
       (*multi_handle)->next = NULL;
     }
@@ -1847,8 +1847,8 @@ int curl_multi_add_handle(struct fetch_info_slist **multi_handle, struct curl_fe
     {
       struct fetch_info_slist *temp = *multi_handle;
       struct fetch_info_slist *new_node = (struct fetch_info_slist *)malloc(sizeof(struct fetch_info_slist));
-
-      if(new_node == NULL || new_fetch == NULL)
+            
+      if(new_node == NULL || new_fetch == NULL) //add failture for malloc here TODO
 	return CURLM_FAILED;
 
       while(temp->next)
@@ -1859,8 +1859,11 @@ int curl_multi_add_handle(struct fetch_info_slist **multi_handle, struct curl_fe
       new_node->fetch_info = new_fetch;
       new_node->handle = new_fetch->curl_handle;
       new_node->next = NULL;
+      new_node->fetch_curl_header_called = false;
       temp->next = new_node;
     }
+
+  
 
   return CURLM_OK;
 }
@@ -1955,15 +1958,13 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 
     LOG(("Flags for temp in curL_multi_perform : %u\n", temp->handle->flags));
 
-    if ((temp->handle->flags & FLAG_GOT_HEADER) && (!temp->fetch_info->had_headers)) /* Check if the headers were received. thanks hidnplayr :P */
+    if ((temp->handle->flags & FLAG_GOT_HEADER) && (!temp->fetch_curl_header_called)) /* Check if the headers were received. thanks hidnplayr :P */
       {
 	LOG(("[wererat]flags inside perform() on handle (%u): %u\n", temp->handle, temp->handle->flags));
 	DBG("Calling fetch_curl_header\n");
-	
-	if(!temp->fetch_info->had_headers)
-	  fetch_curl_header(temp->fetch_info);
-	else
-	  LOG(("fetch already had headers, not calling fetch_curl_header"));
+		
+	fetch_curl_header(temp->fetch_info);	
+	temp->fetch_curl_header_called = true;
       }
     
     if(process_status == 0) 	  /* Handle done doing it's job , http_process returned 0*/
@@ -1973,7 +1974,9 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 	  {
 	    DBG("calling fetch_curl_data in curl_multi_perform\n");
 	    /* LOG(("content in handle is : %s", temp->handle->content_ptr)); */
-	    fetch_curl_data(temp);	      
+	    fetch_curl_data(temp);
+	    fetch_curl_done(temp);
+	    fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, temp->fetch_info);	    
 	  }	  
 	/*TODO: Handle various conditions here, and set the status code accordinpgly when 
 	  calling fetch_curL_done
