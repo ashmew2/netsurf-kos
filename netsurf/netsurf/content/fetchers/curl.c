@@ -1374,11 +1374,12 @@ size_t fetch_curl_data(void *_f)
 	    f->http_code = f->curl_handle->status;
 	    fetch_set_http_code(f->fetch_handle, f->http_code);	  
 	  }
-	__menuet__debug_out("foobar asuidhaisudhaiusdhaiu-=-=-=-=-=-=-\n");
+
+	__menuet__debug_out("fetch_curl_data: ");
 	
 	LOG(("fetch->http_code is  : %ld\n", f->http_code));
 
-	__menuet__debug_out("foobar asuidhaisudhaiusdhaiu-=-=-=-=-=-=-\n");
+	/* __menuet__debug_out("foobar asuidhaisudhaiusdhaiu-=-=-=-=-=-=-\n"); */
 
 	/* ignore body if this is a 401 reply by skipping it and reset
 	   the HTTP response code to enable follow up fetches */
@@ -1388,8 +1389,19 @@ size_t fetch_curl_data(void *_f)
 		f->http_code = 0;
 		/* return size * nmemb; */
 	}
-	
+
+	if(f->had_headers)
+	  __menuet__debug_out("Had headers is true!\n");
+	else
+	  __menuet__debug_out("Had headers is false!\n");
+
+	if(f->http_code == 302)
+	  __menuet__debug_out("http_code is 302!\n");
+	else
+	  __menuet__debug_out("http_code is NOT 302!\n");
+
 	if (f->abort || (!f->had_headers && fetch_curl_process_headers(f))) {
+	  __menuet__debug_out("Setting f->stopped = true\n");
 	  f->stopped = true;
 	  return 0;
 	}
@@ -1399,7 +1411,13 @@ size_t fetch_curl_data(void *_f)
 	msg.data.header_or_data.buf = (const uint8_t *) data;
 	msg.data.header_or_data.len = strlen(data); 	
 	/* msg.data.header_or_data.len = size * nmemb; */
+
+	/* __menuet__debug_out("Calling callback_send_fetch in fetch_curl_data with data : "); */
+	/* __menuet__debug_out(data); */
+	/* __menuet__debug_out("\n"); */
+
 	fetch_send_callback(&msg, f->fetch_handle);
+	__menuet__debug_out("After Calling callback_send_fetch\n in fetch_curl_data");
 
 	if (f->abort) {
 		f->stopped = true;
@@ -1456,7 +1474,7 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 	/* size *= nmemb; */ /* ???? */
 
-	DBG("inside fetch_curl_header()..\n");
+	__menuet__debug_out("inside fetch_curl_header()..\n");
 
 	if (f->abort) {
 		f->stopped = true;
@@ -1468,13 +1486,24 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 	LOG(("fetch->http_code is  : %ld\n", f->http_code));
 
+	if(f->had_headers)
+	  __menuet__debug_out("curl_fetch_data BEFORE: Had headers is true!\n");
+	else
+	  __menuet__debug_out("curl_fetch_data BEFORE: Had headers is false!\n");
+
+
 	msg.type = FETCH_HEADER;
 	msg.data.header_or_data.buf = (const uint8_t *) &(handle->header);
 	msg.data.header_or_data.len = handle->header_length;
 	LOG(("Calling fetch_send_callback from fetch_curl_header"));
 	fetch_send_callback(&msg, f->fetch_handle);
 	LOG(("AFTER Calling fetch_send_callback from fetch_curl_header"));	
-	
+
+	if(f->had_headers)
+	  __menuet__debug_out("curl_fetch_data : Had headers is true!\n");
+	else
+	  __menuet__debug_out("curl_fetch_data : Had headers is false!\n");
+
 	/* Remember to use lower case names for header field names for http.obj */
 	/* We extract only these fields */
 	convert_to_asciiz(http_find_header_field(f->curl_handle, "location"), &f->location);
@@ -1509,6 +1538,13 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	  }	
 
 	LOG(("fetch->http_code is  ( AT THE END of f_c_header): %ld\n", f->http_code));
+	__menuet__debug_out("Leaving fetch_curl_header\n");
+	
+	if(f->had_headers)
+	  __menuet__debug_out("curl_fetch_data : Had headers is true!\n");
+	else
+	  __menuet__debug_out("curl_fetch_data : Had headers is false!\n");
+	
 	/* f->http_code = handle->status; */
 	/* fetch_set_http_code(f->fetch_handle, f->http_code); */
 	
@@ -1582,15 +1618,17 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 bool fetch_curl_process_headers(struct curl_fetch_info *f)
 {
-  long http_code;
+        long http_code;
 	KOSHcode code;
 	fetch_msg msg;	
+	
+	__menuet__debug_out("Setting had_headers to true\n");
 
 	f->had_headers = true;        
 	
 	http_code = f->curl_handle->status;
 	LOG(("Inside fetch_curl_process_headers..HTTP CODE : %ld\n", http_code));
-	__menuet__debug_out("3333foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
+	/* __menuet__debug_out("3333foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n"); */
 
 	if (!f->http_code)
 	  {
@@ -1605,22 +1643,21 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	    /* assert(code.code == CURLE_OK); */
 	}
 
-	LOG(("HTTP status code %li\n", http_code));	
-	__menuet__debug_out("4444foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
+	LOG(("HTTP status code %li\n", http_code));
+	/* __menuet__debug_out("4444foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n"); */
 		
 	if (http_code == 304 && !f->post_urlenc && !f->post_multipart) {
 		/* Not Modified && GET request */
 		msg.type = FETCH_NOTMODIFIED;
-		__menuet__debug_out("555foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
+		/* __menuet__debug_out("555foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n"); */
 		fetch_send_callback(&msg, f->fetch_handle);
 		return true;
 	}
 
 	/* handle HTTP redirects (3xx response codes) */
-	if (300 <= http_code && http_code < 400) {
-	  
+	if (300 <= http_code && http_code < 400) {	  
 	  LOG(("FETCH_REDIRECT, '%s'", f->location));
-	  __menuet__debug_out("6666foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
+	  /* __menuet__debug_out("6666foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n"); */
 	  msg.type = FETCH_REDIRECT;
 	  msg.data.redirect = f->location;
 	  fetch_send_callback(&msg, f->fetch_handle);
@@ -1955,14 +1992,19 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 /*http_get should be used here? TODO*/
     /* Should we check if handle is NULL? It was checked during init TODO */
     int process_status = http_process(temp->handle);
-
+    
     LOG(("Flags for temp in curL_multi_perform : %u\n", temp->handle->flags));
-
+    
     if ((temp->handle->flags & FLAG_GOT_HEADER) && (!temp->fetch_curl_header_called)) /* Check if the headers were received. thanks hidnplayr :P */
       {
 	LOG(("[wererat]flags inside perform() on handle (%u): %u\n", temp->handle, temp->handle->flags));
 	DBG("Calling fetch_curl_header\n");
-		
+	
+	if(temp->fetch_info->had_headers)
+	  __menuet__debug_out("curl_multi_perform : Had headers is true!\n");
+	else
+	  __menuet__debug_out("curl_multi_perform : Had headers is false!\n");
+
 	fetch_curl_header(temp->fetch_info);	
 	temp->fetch_curl_header_called = true;
       }
@@ -1974,10 +2016,16 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 	  {
 	    DBG("calling fetch_curl_data in curl_multi_perform\n");
 	    /* LOG(("content in handle is : %s", temp->handle->content_ptr)); */
-	    fetch_curl_data(temp);
+
+	    if(temp->fetch_info->had_headers)
+	      __menuet__debug_out("curl_multi_perform before fetch_data : Had headers is true!\n");
+	    else
+	      __menuet__debug_out("curl_multi_perform before fetch_data : Had headers is false!\n");
+
+	    fetch_curl_data(temp->fetch_info);
 	    fetch_curl_done(temp);
 	    fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, temp->fetch_info);	    
-	  }	  
+	  }
 	/*TODO: Handle various conditions here, and set the status code accordinpgly when 
 	  calling fetch_curL_done
 	*/
