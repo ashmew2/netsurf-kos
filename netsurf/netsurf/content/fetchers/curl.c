@@ -1390,16 +1390,6 @@ size_t fetch_curl_data(void *_f)
 		/* return size * nmemb; */
 	}
 
-	if(f->had_headers)
-	  __menuet__debug_out("Had headers is true!\n");
-	else
-	  __menuet__debug_out("Had headers is false!\n");
-
-	if(f->http_code == 302)
-	  __menuet__debug_out("http_code is 302!\n");
-	else
-	  __menuet__debug_out("http_code is NOT 302!\n");
-
 	if (f->abort || (!f->had_headers && fetch_curl_process_headers(f))) {
 	  __menuet__debug_out("Setting f->stopped = true\n");
 	  f->stopped = true;
@@ -1409,14 +1399,14 @@ size_t fetch_curl_data(void *_f)
 	/* send data to the caller */
 	msg.type = FETCH_DATA;
 	msg.data.header_or_data.buf = (const uint8_t *) data;
-	msg.data.header_or_data.len = strlen(data); 	
+	msg.data.header_or_data.len = strlen(data);
 	/* msg.data.header_or_data.len = size * nmemb; */
 
 	/* __menuet__debug_out("Calling callback_send_fetch in fetch_curl_data with data : "); */
 	/* __menuet__debug_out(data); */
 	/* __menuet__debug_out("\n"); */
-
 	fetch_send_callback(&msg, f->fetch_handle);
+
 	__menuet__debug_out("After Calling callback_send_fetch\n in fetch_curl_data");
 
 	if (f->abort) {
