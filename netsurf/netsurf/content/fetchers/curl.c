@@ -1377,6 +1377,7 @@ size_t fetch_curl_data(void *_f)
 	if (f->http_code == 401)
 	{
 		f->http_code = 0;
+		return;
 		/* return size * nmemb; */
 	}
 
@@ -1387,13 +1388,24 @@ size_t fetch_curl_data(void *_f)
 	}
 
 	/* send data to the caller */
+
+	LOG(("Inside fetch_curl_data, http_code is : %li", f->http_code));
+	
+	if(f->http_code == 200)
+	  {
+	    char *content_type;
+	    
+	    convert_to_asciiz("content-type", http_find_header_field(f->curl_handle, "content-type"), &content_type);
+	    
+	    msg.type = FETCH_HEADER;
+	    msg.data.header_or_data.buf = (const uint8_t *) content_type;
+	    msg.data.header_or_data.len = strlen(content_type);
+	    fetch_send_callback(&msg, f->fetch_handle);
+	  }
+
 	msg.type = FETCH_DATA;
 	msg.data.header_or_data.buf = (const uint8_t *) data;
-	msg.data.header_or_data.len = f->curl_handle->content_received;
-	/* msg.data.header_or_data.len = size * nmemb; */
-	/* __menuet__debug_out("Calling callback_send_fetch in fetch_curl_data with data : "); */
-	/* __menuet__debug_out(data); */
-	/* __menuet__debug_out("\n"); */
+	msg.data.header_or_data.len = (size_t)f->curl_handle->content_received;
 	fetch_send_callback(&msg, f->fetch_handle);
 
 	__menuet__debug_out("After Calling callback_send_fetch\n in fetch_curl_data");
@@ -1419,34 +1431,38 @@ size_t fetch_curl_data(void *_f)
    
 **/
 
-void convert_to_asciiz(char *field_name, char *source, char **dest) 
-{  
-	char *i;
-	char *temp;
-	int field_name_len = strlen(field_name);
+void convert_to_asciiz(char *field_name, char *source, char **dest)
+{
+  char *i;
 
-	if(source == NULL)
-	  return;
-	
-	for(i = source; !isspace(*i); i++);
-	
-	*dest = (char *)malloc(i - source + 1 + field_name_len + 2);	  /* Allocate a big enough buffer with +1 for NULL character */
-	/*The +2 above is for the semi colon and a space after the field name*/
+  if(source == NULL)
+    return;
+  
+  if(field_name == NULL)
+    {
+      for(i = source; !isspace(*i); i++);
+      
+      *dest = (char *)malloc(i - source + 1);	/* Allocate a big enough buffer with +1 for NULL character */
+      strncpy(*dest, source, i - source); /* Copy to buffer */
+      (*dest)[i - source] = '\0';
+    }
+  else
+    {
+      char *temp;
+      for(i = source; !isspace(*i); i++);
+      
+      *dest = (char *)malloc(i - source + 1 + strlen(field_name) + 2);	/* Allocate a big enough buffer with +1 for NULL character */
+      strcpy(*dest, field_name);
+      temp = *dest + strlen(field_name);
+      *temp = ':';
+      temp++;
+      *temp = ' ';
+      temp++;
 
-	strcpy(*dest, field_name);
-	temp = *dest + field_name_len;
-
-	if(field_name)
-	  {
-	    *temp = ':';
-	    temp++;
-	    *temp = ' ';
-	    temp++;
-	  }
-
-	strncpy(temp, source, i - source);        /* Copy to buffer */
-	temp[i - source] = '\0';
-	
+      strncpy(temp, source, i - source); /* Copy to buffer */
+      temp[i - source] = '\0';
+    }
+  
 }
 
 /**
@@ -1472,7 +1488,7 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 	/* size *= nmemb; */ /* ???? */
 
-	__menuet__debug_out("inside fetch_curl_header()..\n");
+	__menuet__debug_out("inside fetch_curl_header()..\n");	
 
 	if (f->abort) {
 		f->stopped = true;
@@ -1500,7 +1516,7 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 	/* Remember to use lower case names for header field names for http.obj */
 	/* We extract only these fields */
-	convert_to_asciiz("location", http_find_header_field(f->curl_handle, "location"), &f->location);
+	convert_to_asciiz(NULL,http_find_header_field(f->curl_handle, "location"), &f->location);
 	convert_to_asciiz("content-length", http_find_header_field(f->curl_handle, "content-length"), &content_length);
 	convert_to_asciiz("content-type", http_find_header_field(f->curl_handle, "content-type"), &content_type);
 	convert_to_asciiz("set-cookie", http_find_header_field(f->curl_handle, "set-cookie"), &cookie);
@@ -1508,41 +1524,45 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	/* TODO: Uncomment following line and add more fields if required later */
 	/* convert_to_asciiz("www-authenticate", http_find_header_field(f->curl_handle, "www-authenticate"), &realm); */
 
-	if(f->location)
-	  {
-	  msg.type = FETCH_HEADER;
-	  msg.data.header_or_data.buf = (const uint8_t *) f->location;
-	  msg.data.header_or_data.len = strlen(f->location);
-	  fetch_send_callback(&msg, f->fetch_handle);
-	  }
+	LOG(("The &header is : %s", &(f->curl_handle->header)));
+
+	/* if(f->location) */
+	/*   { */
+	/*   LOG(("Setting data buf to %s with length %d", f->location, strlen(f->location))); */
+	/*   msg.type = FETCH_HEADER; */
+	/*   msg.data.header_or_data.buf = (const uint8_t *) f->location; */
+	/*   msg.data.header_or_data.len = strlen(f->location); */
+	/*   fetch_send_callback(&msg, f->fetch_handle); */
+	/*   } */
 	
-	if(content_type)
-	  {
-	  f->content_length = atoi(content_type);
-	  msg.type = FETCH_HEADER;
-	  msg.data.header_or_data.buf = (const uint8_t *) content_type;
-	  msg.data.header_or_data.len = strlen(content_type);
-	  fetch_send_callback(&msg, f->fetch_handle);
-	  }
+	/* if(content_type) */
+	/*   { */
+	/*   LOG(("Setting data buf to %s with length %d", content_type, strlen(content_type)));	   */
+	/*   f->content_length = atoi(content_type); */
+	/*   msg.type = FETCH_HEADER; */
+	/*   msg.data.header_or_data.buf = (const uint8_t *) content_type; */
+	/*   msg.data.header_or_data.len = strlen(content_type); */
+	/*   fetch_send_callback(&msg, f->fetch_handle); */
+	/*   } */
 	
-	if(content_length)
-	  {
-	  f->content_length = atoi(content_length);
-	  msg.type = FETCH_HEADER;
-	  msg.data.header_or_data.buf = (const uint8_t *) content_length;
-	  msg.data.header_or_data.len = strlen(content_length);
-	  fetch_send_callback(&msg, f->fetch_handle);
-	  }
+	/* if(content_length) */
+	/*   { */
+	/*   f->content_length = atoi(content_length); */
+	/*   msg.type = FETCH_HEADER; */
+	/*   msg.data.header_or_data.buf = (const uint8_t *) content_length; */
+	/*   msg.data.header_or_data.len = strlen(content_length); */
+	/*   fetch_send_callback(&msg, f->fetch_handle); */
+	/*   } */
 
 	/* Set appropriate fetch properties */
-	if(cookie)
-	  {
-	    fetch_set_cookie(f->fetch_handle, cookie);
-	    msg.type = FETCH_HEADER;
-	    msg.data.header_or_data.buf = (const uint8_t *) cookie;
-	    msg.data.header_or_data.len = strlen(cookie);
-	    fetch_send_callback(&msg, f->fetch_handle);	    
-	  }
+	/* if(cookie) */
+	/*   { */
+	/*     fetch_set_cookie(f->fetch_handle, cookie); */
+	/*     msg.type = FETCH_HEADER; */
+	/*     msg.data.header_or_data.buf = (const uint8_t *) cookie; */
+	/*     msg.data.header_or_data.len = strlen(cookie); */
+	/*     fetch_send_callback(&msg, f->fetch_handle);	     */
+	/*   } */
 
 	if(realm) /* Don't worry about this for now , fix it later TODO */
 	  {    
@@ -1672,12 +1692,10 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	}
 
 	LOG(("HTTP status code %li\n", http_code));
-	/* __menuet__debug_out("4444foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n"); */
 		
 	if (http_code == 304 && !f->post_urlenc && !f->post_multipart) {
 		/* Not Modified && GET request */
 		msg.type = FETCH_NOTMODIFIED;
-		/* __menuet__debug_out("555foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n"); */
 		fetch_send_callback(&msg, f->fetch_handle);
 		return true;
 	}
@@ -1685,7 +1703,6 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	/* handle HTTP redirects (3xx response codes) */
 	if (300 <= http_code && http_code < 400) {	  
 	  LOG(("FETCH_REDIRECT, '%s'", f->location));
-	  /* __menuet__debug_out("6666foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n"); */
 	  msg.type = FETCH_REDIRECT;
 	  msg.data.redirect = f->location;
 	  fetch_send_callback(&msg, f->fetch_handle);
@@ -1694,9 +1711,7 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 
 	/* handle HTTP 401 (Authentication errors) */
 	if (http_code == 401) {
-	  DBG("FETCH_AUTH\n");
-	
-	  msg.type = FETCH_AUTH;
+                msg.type = FETCH_AUTH;
 		msg.data.auth.realm = f->realm;
 		fetch_send_callback(&msg, f->fetch_handle);
 		return true;
@@ -2032,7 +2047,7 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 	/*   __menuet__debug_out("curl_multi_perform : Had headers is true!\n"); */
 	/* else */
 	/*   __menuet__debug_out("curl_multi_perform : Had headers is false!\n"); */
-
+	LOG(("Calling fetch_curl_header..."));
 	fetch_curl_header(temp->fetch_info);	
 	temp->fetch_curl_header_called = true;
       }

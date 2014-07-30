@@ -2374,7 +2374,6 @@ void llcache_finalise(void)
 nserror llcache_poll(void)
 {
 	llcache_object *object;
-	LOG(("llcache_poll()"));
 	fetch_poll();
 	
 	/* Catch new users up with state of objects */

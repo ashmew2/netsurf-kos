@@ -69,7 +69,7 @@ struct fetch_file_context {
 
 	nsurl *url; /**< The full url the fetch refers to */
 	char *path; /**< The actual path to be used with open() */
-
+  
 	time_t file_etag; /**< Request etag for file (previous st.m_time) */
 };
 
@@ -148,7 +148,6 @@ fetch_file_setup(struct fetch *fetchh,
 
 	ctx->url = nsurl_ref(url);
 
-	__menuet__debug_out("SCanning request headers in file.c\n");
 	/* Scan request headers looking for If-None-Match */
 	for (i = 0; headers[i] != NULL; i++) {
 		if (strncasecmp(headers[i], "If-None-Match:", 
@@ -169,7 +168,6 @@ fetch_file_setup(struct fetch *fetchh,
 	ctx->fetchh = fetchh;
 
 	RING_INSERT(ring, ctx);
-	__menuet__debug_out("returning from fetch_file_setup in  file.c\n");
 	return ctx;
 }
 
@@ -235,7 +233,7 @@ static void fetch_file_process_error(struct fetch_file_context *ctx, int code)
 	title = messages_get(key);
 
 	snprintf(buffer, sizeof buffer, "<html><head><title>%s</title></head>"
-			"<body><h1>%s</h1>"
+		 "<body><h1>%s</h1>"
 			"<p>Error %d while fetching file %s</p></body></html>",
 			title, title, code, nsurl_access(ctx->url));
 
