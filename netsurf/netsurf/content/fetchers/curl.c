@@ -437,7 +437,6 @@ bool fetch_curl_initialise(lwc_string *scheme)
 void fetch_curl_finalise(lwc_string *scheme)
 {
 	struct cache_handle *h;
-	DBG("Inside fetch_curl_finalize..\n");
 	curl_fetchers_registered--;
 	LOG(("Finalise cURL fetcher %s", lwc_string_data(scheme)));
 	if (curl_fetchers_registered == 0) {
@@ -501,8 +500,6 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 	struct curl_fetch_info *fetch;
 	struct  curl_slist *slist;
 	int i;
-
-	DBG("Inside fetch_curl_setup()\n");
 	
 	fetch = malloc(sizeof (*fetch));
 	if (fetch == NULL)
@@ -661,7 +658,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	  fetch_curl_abort(fetch);
 	  return NULL;
 	}
-
+	
 	DBG("Calling http_get with : ");
 	DBG(zz);
 	DBG("\n");
@@ -927,7 +924,6 @@ fetch_curl_sslctxfun(CURL *curl_handle, void *_sslctx, void *parm)
 void fetch_curl_abort(void *vf)
 {
 	struct curl_fetch_info *f = (struct curl_fetch_info *)vf;
-	DBG("inside fetch_curl_abort()...\n");
 	assert(f);
 	LOG(("fetch %p, url '%s'", f, nsurl_access(f->url)));
 
@@ -953,8 +949,6 @@ void fetch_curl_stop(struct fetch_info_slist *node)
 	KOSHMcode codem;
 
 	/* TODO: Assert doesn't look like a safe option, but this is probably a fatal condition */
-
-	DBG("inside fetch_curl_stop()..\n");
 
 	struct curl_fetch_info *f = node->fetch_info;
 
@@ -1031,13 +1025,13 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 
 	/*TODO: Probably the best way is to combine both loops and use http_process to judge finished transfers*/
 	
-	LOG(("Inside fetch_curl_poll\n"));
+	/* LOG(("Inside fetch_curl_poll\n")); */
 	/* do any possible work on the current fetches */
 
 	/* do { */
 	  /* TODO: Replace curl_multi_perform function. This is the master function. */
 
-	  DBG(("Calling curl_multi_perform\n"));
+	  /* DBG(("Calling curl_multi_perform\n")); */
 	  
 	  codem.code = curl_multi_perform(fetch_curl_multi);
 		if (codem.code != CURLM_OK && codem.code != CURLM_CALL_MULTI_PERFORM) {
@@ -1079,7 +1073,7 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 		schedule(1, (schedule_callback_fn)fetch_curl_poll, fetch_curl_poll);
 	}
 #endif
-	LOG(("Returning froms fetch_curl_poll\n"));
+	/* LOG(("Returning froms fetch_curl_poll\n")); */
 }
 
 
@@ -1107,15 +1101,12 @@ void fetch_curl_done(struct fetch_info_slist *node)
 	/* TODO: Remove this definition and get a better replacement for CURLINFO_PRIVATE */
 	
 	int CURLINFO_PRIVATE = 20;
-
-	DBG("inside fetch_curl_done()..\n");
-
 	/* struct cert_info certs[MAX_CERTS]; */
 	/* memset(certs, 0, sizeof(certs)); */
 
 	/* find the structure associated with this fetch */
 	/* For some reason, cURL thinks CURLINFO_PRIVATE should be a string?! */
- /* TODO: Do we really need curl_easy_getinfo? Our library struct provides us with all of this info already  */
+	/* TODO: Do we really need curl_easy_getinfo? Our library struct provides us with all of this info already  */
 	/* code.code = curl_easy_getinfo(curl_handle, CURLINFO_PRIVATE, _hideous_hack); */
 	/* assert(code.code == CURLE_OK); */
 
@@ -1167,6 +1158,7 @@ void fetch_curl_done(struct fetch_info_slist *node)
 		; /* fetch was aborted: no callback */
 	else if (finished) {
 		msg.type = FETCH_FINISHED;
+		__menuet__debug_out("Calling FETCH_FINISHED callback inside fetch_curl_data\n");
 		fetch_send_callback(&msg, f->fetch_handle);
 	/* } else if (cert) { */
 	/* 	int i; */
@@ -1361,7 +1353,7 @@ size_t fetch_curl_data(void *_f)
 
 		   code = curl_easy_getinfo(f->curl_handle, CURLINFO_HTTP_CODE, */
 		/* 			 &f->http_code); */	  	  
-	  __menuet__debug_out("f->http_code is 0");
+	  __menuet__debug_out("f->http_code is 0\n");
 	  LOG(("f->http_code was 0\n"));
 
 	  f->http_code = f->curl_handle->status;
@@ -1378,8 +1370,6 @@ size_t fetch_curl_data(void *_f)
 	__menuet__debug_out("fetch_curl_data: ");
 	
 	LOG(("fetch->http_code is  : %ld\n", f->http_code));
-
-	/* __menuet__debug_out("foobar asuidhaisudhaiusdhaiu-=-=-=-=-=-=-\n"); */
 
 	/* ignore body if this is a 401 reply by skipping it and reset
 	   the HTTP response code to enable follow up fetches */
@@ -1399,9 +1389,8 @@ size_t fetch_curl_data(void *_f)
 	/* send data to the caller */
 	msg.type = FETCH_DATA;
 	msg.data.header_or_data.buf = (const uint8_t *) data;
-	msg.data.header_or_data.len = strlen(data);
+	msg.data.header_or_data.len = f->curl_handle->content_received;
 	/* msg.data.header_or_data.len = size * nmemb; */
-
 	/* __menuet__debug_out("Calling callback_send_fetch in fetch_curl_data with data : "); */
 	/* __menuet__debug_out(data); */
 	/* __menuet__debug_out("\n"); */
@@ -1410,36 +1399,53 @@ size_t fetch_curl_data(void *_f)
 	__menuet__debug_out("After Calling callback_send_fetch\n in fetch_curl_data");
 
 	if (f->abort) {
+	  __menuet__debug_out("f->abort is true. Returning 0 from fetch_curl_data");
 		f->stopped = true;
 		return 0;
 	}
 
+	__menuet__debug_out("Exiting fetch_curl_data");
 	/* return size * nmemb; */
 }
 
 /**
    Convertor function for converting a header field to its dedicated buffer 
    Also terminates with a NULL character so that the string is safe for further use.
-
+   field_name: Append the field name: to the generated string. Pass NULL for no field name.
    source -> Refers to the original data which needs to be copied into dest.
    dest -> destination. This will be allocated using malloc in the function as size is determined here.1
-
+   
    dest uses a double pointer in order to allocate storage for the original pointer and not it's temporary copy.
    
 **/
 
-void convert_to_asciiz(char *source, char **dest) 
+void convert_to_asciiz(char *field_name, char *source, char **dest) 
 {  
 	char *i;
+	char *temp;
+	int field_name_len = strlen(field_name);
 
 	if(source == NULL)
 	  return;
-
+	
 	for(i = source; !isspace(*i); i++);
+	
+	*dest = (char *)malloc(i - source + 1 + field_name_len + 2);	  /* Allocate a big enough buffer with +1 for NULL character */
+	/*The +2 above is for the semi colon and a space after the field name*/
 
-	*dest = (char *)malloc(i - source + 1);	  /* Allocate a big enough buffer with +1 for NULL character */
-	strncpy(*dest, source, i - source);        /* Copy to buffer */
-	(*dest)[i - source] = '\0';
+	strcpy(*dest, field_name);
+	temp = *dest + field_name_len;
+
+	if(field_name)
+	  {
+	    *temp = ':';
+	    temp++;
+	    *temp = ' ';
+	    temp++;
+	  }
+
+	strncpy(temp, source, i - source);        /* Copy to buffer */
+	temp[i - source] = '\0';
 	
 }
 
@@ -1450,6 +1456,7 @@ void convert_to_asciiz(char *source, char **dest)
  */
 
 /*TODO: Seems okay for now */
+/* Called when the headers have been received. A callback should be sent for each header line and not the entire thing at once*/
 
 void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 {
@@ -1458,6 +1465,7 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	char *realm = NULL; /*Remove me ? TODO*/
 	char *cookie = NULL;
 	char *content_length = NULL;
+	char *content_type = NULL;
 	int realm_start;
 	int i;
 	fetch_msg msg;
@@ -1480,11 +1488,7 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	  __menuet__debug_out("curl_fetch_data BEFORE: Had headers is true!\n");
 	else
 	  __menuet__debug_out("curl_fetch_data BEFORE: Had headers is false!\n");
-
-
-	msg.type = FETCH_HEADER;
-	msg.data.header_or_data.buf = (const uint8_t *) &(handle->header);
-	msg.data.header_or_data.len = handle->header_length;
+	
 	LOG(("Calling fetch_send_callback from fetch_curl_header"));
 	fetch_send_callback(&msg, f->fetch_handle);
 	LOG(("AFTER Calling fetch_send_callback from fetch_curl_header"));	
@@ -1496,23 +1500,55 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 	/* Remember to use lower case names for header field names for http.obj */
 	/* We extract only these fields */
-	convert_to_asciiz(http_find_header_field(f->curl_handle, "location"), &f->location);
-	convert_to_asciiz(http_find_header_field(f->curl_handle, "content-length"), &content_length);
-	convert_to_asciiz(http_find_header_field(f->curl_handle, "set-cookie"), &cookie);
-	convert_to_asciiz(http_find_header_field(f->curl_handle, "www-authenticate"), &realm);
+	convert_to_asciiz("location", http_find_header_field(f->curl_handle, "location"), &f->location);
+	convert_to_asciiz("content-length", http_find_header_field(f->curl_handle, "content-length"), &content_length);
+	convert_to_asciiz("content-type", http_find_header_field(f->curl_handle, "content-type"), &content_type);
+	convert_to_asciiz("set-cookie", http_find_header_field(f->curl_handle, "set-cookie"), &cookie);
+	
+	/* TODO: Uncomment following line and add more fields if required later */
+	/* convert_to_asciiz("www-authenticate", http_find_header_field(f->curl_handle, "www-authenticate"), &realm); */
 
+	if(f->location)
+	  {
+	  msg.type = FETCH_HEADER;
+	  msg.data.header_or_data.buf = (const uint8_t *) f->location;
+	  msg.data.header_or_data.len = strlen(f->location);
+	  fetch_send_callback(&msg, f->fetch_handle);
+	  }
+	
+	if(content_type)
+	  {
+	  f->content_length = atoi(content_type);
+	  msg.type = FETCH_HEADER;
+	  msg.data.header_or_data.buf = (const uint8_t *) content_type;
+	  msg.data.header_or_data.len = strlen(content_type);
+	  fetch_send_callback(&msg, f->fetch_handle);
+	  }
+	
 	if(content_length)
+	  {
 	  f->content_length = atoi(content_length);
+	  msg.type = FETCH_HEADER;
+	  msg.data.header_or_data.buf = (const uint8_t *) content_length;
+	  msg.data.header_or_data.len = strlen(content_length);
+	  fetch_send_callback(&msg, f->fetch_handle);
+	  }
 
 	/* Set appropriate fetch properties */
-	if(cookie!=NULL)
-		fetch_set_cookie(f->fetch_handle, cookie);
+	if(cookie)
+	  {
+	    fetch_set_cookie(f->fetch_handle, cookie);
+	    msg.type = FETCH_HEADER;
+	    msg.data.header_or_data.buf = (const uint8_t *) cookie;
+	    msg.data.header_or_data.len = strlen(cookie);
+	    fetch_send_callback(&msg, f->fetch_handle);	    
+	  }
 
-	if(realm)
+	if(realm) /* Don't worry about this for now , fix it later TODO */
 	  {    
 	    /* For getting the realm, this was used as an example : ('WWW-Authenticate: Basic realm="My Realm"')  */	   
 	    
-	    for(i = 0 ; realm[i]; i++)
+	    for(i = strlen("www-authenticate: "); realm[i]; i++)
 	      if(realm[i] == '"') {
 		realm_start = i+1;
 		break;
@@ -1526,6 +1562,8 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	   
 	    f->realm = realm;
 	  }	
+
+ /* TODO: call the fetch_callback for www authenticate field and any other fields that will be added here later */
 
 	LOG(("fetch->http_code is  ( AT THE END of f_c_header): %ld\n", f->http_code));
 	__menuet__debug_out("Leaving fetch_curl_header\n");
@@ -1975,25 +2013,25 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
   struct fetch_info_slist *temp = multi_list;
   struct fetch_info_slist *temp_prev = temp;
 
-  LOG(("Inside curl_multi_perform"));
-  DBG("inside curl_multi_perform()..\n");
+  /* LOG(("Inside curl_multi_perform")); */
+  /* DBG("inside curl_multi_perform()..\n"); */
 
   while(temp) {
 /*http_get should be used here? TODO*/
     /* Should we check if handle is NULL? It was checked during init TODO */
     int process_status = http_process(temp->handle);
-    
-    LOG(("Flags for temp in curL_multi_perform : %u\n", temp->handle->flags));
+    /* LOG(("Processed for %u fetch->url = %s, received : %u", temp->handle, temp->fetch_info->url, temp->handle->content_received)); */    
+    /* LOG(("Flags for temp in curL_multi_perform : %u\n", temp->handle->flags)); */
     
     if ((temp->handle->flags & FLAG_GOT_HEADER) && (!temp->fetch_curl_header_called)) /* Check if the headers were received. thanks hidnplayr :P */
       {
-	LOG(("[wererat]flags inside perform() on handle (%u): %u\n", temp->handle, temp->handle->flags));
-	DBG("Calling fetch_curl_header\n");
+	/* LOG(("[wererat]flags inside perform() on handle (%u): %u\n", temp->handle, temp->handle->flags)); */
+	/* DBG("Calling fetch_curl_header\n"); */
 	
-	if(temp->fetch_info->had_headers)
-	  __menuet__debug_out("curl_multi_perform : Had headers is true!\n");
-	else
-	  __menuet__debug_out("curl_multi_perform : Had headers is false!\n");
+	/* if(temp->fetch_info->had_headers) */
+	/*   __menuet__debug_out("curl_multi_perform : Had headers is true!\n"); */
+	/* else */
+	/*   __menuet__debug_out("curl_multi_perform : Had headers is false!\n"); */
 
 	fetch_curl_header(temp->fetch_info);	
 	temp->fetch_curl_header_called = true;
@@ -2013,7 +2051,10 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 	      __menuet__debug_out("curl_multi_perform before fetch_data : Had headers is false!\n");
 
 	    fetch_curl_data(temp->fetch_info);
+	    __menuet__debug_out("Calling fetch_curl_done from multi_perform now\n");
 	    fetch_curl_done(temp);
+	    __menuet__debug_out("Calling curl_multi_remove from multi_perform now\n");
+
 	    fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, temp->fetch_info);	    
 	  }
 	/*TODO: Handle various conditions here, and set the status code accordinpgly when 
@@ -2029,7 +2070,7 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
     temp = temp->next;
   }
   
-  DBG("Leaving curl_multi_perform\n");
+  /* DBG("Leaving curl_multi_perform\n"); */
 }
 
 void curl_easy_cleanup(struct http_msg *handle)
