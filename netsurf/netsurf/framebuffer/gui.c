@@ -624,12 +624,12 @@ main(int argc, char** argv)
 void
 gui_poll(bool active)
 {
-	LOG(("GUI poll in"));
+	/* LOG(("GUI poll in")); */
 
 	nsfb_event_t event;
 	int timeout; /* timeout in miliseconds */
 
-LOG(("schedule run"));
+/* LOG(("schedule run")); */
 	/* run the scheduler and discover how long to wait for the next event */
 	timeout = schedule_run();
 
@@ -637,22 +637,22 @@ LOG(("schedule run"));
 	if (active)
 		timeout = 0;
 
-LOG(("redraw pending"));
+/* LOG(("redraw pending")); */
 	/* if redraws are pending do not wait for event, return immediately */
 	if (fbtk_get_redraw_pending(fbtk))
 		timeout = 0;
 
-LOG(("fbtk event"));
+/* LOG(("fbtk event")); */
 	if (fbtk_event(fbtk, &event, timeout)) {
 		if ((event.type == NSFB_EVENT_CONTROL) &&
 		    (event.value.controlcode ==  NSFB_CONTROL_QUIT))
 			netsurf_quit = true;
 	}
 
-LOG(("fbtk redraw"));
+/* LOG(("fbtk redraw")); */
 	fbtk_redraw(fbtk);
 
-LOG(("GUI poll out success"));
+/* LOG(("GUI poll out success")); */
 }
 
 void

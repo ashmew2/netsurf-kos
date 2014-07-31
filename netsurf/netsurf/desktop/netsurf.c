@@ -247,9 +247,9 @@ nserror netsurf_init(int *pargc,
 int netsurf_main_loop(void)
 {
 	while (!netsurf_quit) {
-		LOG(("GUI POLL"));
+		/* LOG(("GUI POLL")); */
 		gui_poll(fetch_active);
-		LOG(("CACHE POLL"));
+		/* LOG(("CACHE POLL")); */
 		hlcache_poll();
 	}
 

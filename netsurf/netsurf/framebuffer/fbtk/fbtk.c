@@ -532,7 +532,7 @@ fbtk_widget_new(fbtk_widget_t *parent,
 		int width,
 		int height)
 {
-	LOG(("New widget..."));
+	/* LOG(("New widget...")); */
 
 	fbtk_widget_t *neww; /* new widget */
 
@@ -540,12 +540,12 @@ fbtk_widget_new(fbtk_widget_t *parent,
 	{LOG(("parent null..."));
 		return NULL;}
 
-	LOG(("calloc..."));
+	/* LOG(("calloc...")); */
 	neww = calloc(1, sizeof(fbtk_widget_t));
 	if (neww == NULL)
 		return NULL;
 
-	LOG(("super!..."));
+	/* LOG(("super!...")); */
 	LOG(("creating %p %d,%d %d,%d", neww, x, y, width, height));
 
 	/* make new window fit inside parent */
@@ -627,7 +627,7 @@ do_redraw(nsfb_t *nsfb, fbtk_widget_t *widget)
 	fbtk_widget_t *cwidget; /* child widget */
 
 
-	LOG(("DO REDRAW"));
+	/* LOG(("DO REDRAW")); */
 	//DBG("\n***********\nDO REDRAW\n********\n");
 	/* check if the widget requires redrawing */
 	if (widget->redraw.needed == true) {
@@ -641,7 +641,7 @@ do_redraw(nsfb_t *nsfb, fbtk_widget_t *widget)
 		     plot_ctx.x1, plot_ctx.y1));
 		if (nsfb_plot_set_clip(nsfb, &plot_ctx) == true) {
 			
-	LOG(("POST CALLBACK"));
+	/* LOG(("POST CALLBACK")); */
 	//DBG("\n***********\nPOST CALLBACK\n********\n");
 			
 			fbtk_post_callback(widget, FBTK_CBT_REDRAW);
@@ -650,27 +650,27 @@ do_redraw(nsfb_t *nsfb, fbtk_widget_t *widget)
 	}
 
 	
-	LOG(("DO CHILD"));
+	/* LOG(("DO CHILD")); */
 	//DBG("\n***********\nDO CHILD\n********\n");
 
 	/* walk the widgets children if child flag is set */
 	if (widget->redraw.child) {
-		LOG(("DO CHILD 2"));
+		/* LOG(("DO CHILD 2")); */
 	//DBG("\n***********\nDO CHILD 2\n********\n");
 		cwidget = widget->last_child;
 		while (cwidget != NULL) {
-				LOG(("DO CHILD 3 ZZZ"));
+				/* LOG(("DO CHILD 3 ZZZ")); */
 	//DBG("\n***********\nDO CHILD 3 ZZZ\n********\n");
 			do_redraw(nsfb, cwidget);
 			cwidget = cwidget->prev;
 		}
-			LOG(("DO CHILD 4"));
+			/* LOG(("DO CHILD 4")); */
 	//DBG("\n***********\nDO CHILD 4\n********\n");
 		widget->redraw.child = false;
 	}
 
 
-	LOG(("SUP"));
+	/* LOG(("SUP")); */
 	//DBG("\n***********\nFIN REDRAW\n********\n");
 
 	return 1;
@@ -727,7 +727,7 @@ int
 fbtk_post_callback(fbtk_widget_t *widget, fbtk_callback_type cbt, ...)
 {
 	
-	LOG(("DO POST CALLBACK"));
+	/* LOG(("DO POST CALLBACK")); */
 	//DBG("\n***********\nDO POST CALLBACK\n********\n");
 	
 	fbtk_callback_info cbi;
@@ -742,14 +742,14 @@ fbtk_post_callback(fbtk_widget_t *widget, fbtk_callback_type cbt, ...)
 	if (widget->mapped == false)
 		return ret;
 
-	LOG(("DO POST CALLBACK 2"));
+	/* LOG(("DO POST CALLBACK 2")); */
 	//DBG("\n***********\nDO POST CALLBACK 2\n********\n");
 
 	if (widget->callback[cbt] != NULL) {
 		cbi.type = cbt;
 		cbi.context = widget->callback_context[cbt];
 
-	LOG(("DO POST CALLBACK 3 - VA"));
+	/* LOG(("DO POST CALLBACK 3 - VA")); */
 	//DBG("\n***********\nDO POST CALLBACK 3 - VA\n********\n");
 	
 		va_start(ap, cbt);
@@ -800,25 +800,25 @@ fbtk_post_callback(fbtk_widget_t *widget, fbtk_callback_type cbt, ...)
 			break;
 		}
 		
-		LOG(("DO POST CALLBACK free"));
+		/* LOG(("DO POST CALLBACK free")); */
 	//DBG("\n***********\nDO POST CALLBACK free\n********\n");
 		va_end(ap);
 
 		
-		LOG(("DO CALLBACK YEAH"));
+		/* LOG(("DO CALLBACK YEAH")); */
 	//DBG("\n***********\nWTF IS THIS\n********\n");
 	char zupa[64];
 	
 	sprintf (zupa, "ADDRESS of callback is %x \n",(widget->callback[cbt]));
 	//DBG(zupa);
-	LOG(("ADDRESS of callback is %x \n",(widget->callback[cbt])));
+	/* LOG(("ADDRESS of callback is %x \n",(widget->callback[cbt]))); */
 	
 		ret = (widget->callback[cbt])(widget, &cbi);
-			LOG(("DO CALLBACK YEAH 2"));
+			/* LOG(("DO CALLBACK YEAH 2")); */
 	//DBG("\n***********\nWTF IS THIS!!!12121\n********\n");
 	}
 
-LOG(("DO POST CALLBACK OK"));
+/* LOG(("DO POST CALLBACK OK")); */
 	//DBG("\n***********\nDO POST CALLBACK OK\n********\n");
 	return ret;
 }

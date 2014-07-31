@@ -528,11 +528,16 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 	fetch->post_multipart = NULL;
 
 	if (post_urlenc)
-		fetch->post_urlenc = strdup(post_urlenc);
+	  {
+	    LOG(("post_urlenc is not NULL : %s.\n", post_urlenc));
+	    fetch->post_urlenc = strdup(post_urlenc);
+	  }
 	else if (post_multipart)
+	  {
+	    LOG(("post_multipart is not NULL : %x.\n", post_multipart));	    
 	  /*TODO: Need a post converter here, shouldn't be large though*/
 	  fetch->post_multipart = fetch_curl_post_convert(post_multipart);
-
+	  }
 	/* memset(fetch->cert_data, 0, sizeof(fetch->cert_data)); */
 	fetch->last_progress_update = 0;
 
@@ -1323,6 +1328,25 @@ int fetch_curl_ignore_debug(struct http_msg *handle,
 	return 0;
 }
 
+void send_header_callbacks(char *header, unsigned int header_length)
+{
+  fetch_msg msg;
+  int prev_newline = -1, newline = 0;
+
+  msg.type = FETCH_HEADER;
+  
+  for(i = 0;i < header_length; i++)
+    {
+      if(header[i] == '\n')
+	{
+	  prev_newline = i;
+	}
+      msg.data.header_or_data.buf = (const uint8_t *) content_type;
+      msg.data.header_or_data.len = strlen(content_type);
+      fetch_send_callback(&msg, f->fetch_handle);
+    }
+}
+
 
 /**
  * Callback function for cURL.
@@ -1393,8 +1417,9 @@ size_t fetch_curl_data(void *_f)
 	
 	if(f->http_code == 200)
 	  {
-	    char *content_type;
-	    
+	    char *content_type;	    
+	    send_header_callbacks(&f->curl_handle->header, f->curl_handle->header_length);
+
 	    convert_to_asciiz("content-type", http_find_header_field(f->curl_handle, "content-type"), &content_type);
 	    
 	    msg.type = FETCH_HEADER;
