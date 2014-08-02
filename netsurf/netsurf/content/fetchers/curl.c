@@ -1332,6 +1332,7 @@ void send_header_callbacks(char *header, unsigned int header_length)
 {
   fetch_msg msg;
   int prev_newline = -1, newline = 0;
+  int i;
 
   msg.type = FETCH_HEADER;
   
