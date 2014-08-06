@@ -5020,16 +5020,16 @@ Linker script and memory map
  *fill*         0x0000000000136829       0x17 
  .rodata        0x0000000000136840       0x78 history_global_core.o
  .rodata.str1.1
-                0x00000000001368b8      0x101 hlcache.o
-                                        0x10d (size before relaxing)
- *fill*         0x00000000001369b9        0x3 
+                0x00000000001368b8      0x106 hlcache.o
+                                        0x112 (size before relaxing)
+ *fill*         0x00000000001369be        0x2 
  .rodata.str1.4
-                0x00000000001369bc       0xc2 hlcache.o
- .rodata        0x0000000000136a7e       0x58 hlcache.o
+                0x00000000001369c0       0xc2 hlcache.o
+ .rodata        0x0000000000136a82       0x58 hlcache.o
  .rodata.str1.1
-                0x0000000000136ad6       0xbc hotlist.o
+                0x0000000000136ada       0xbc hotlist.o
                                          0xd5 (size before relaxing)
- *fill*         0x0000000000136b92        0xe 
+ *fill*         0x0000000000136b96        0xa 
  .rodata        0x0000000000136ba0       0x68 hotlist.o
  .rodata.str1.4
                 0x0000000000136c08      0x103 hotlist.o

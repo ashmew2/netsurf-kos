@@ -820,7 +820,7 @@ nserror hlcache_find_content(hlcache_retrieval_ctx *ctx,
 			}
 		}
 	}
-	LOG(("Returning.")); 
+	LOG(("Returning from ")); 
 	return error;
 }
 
