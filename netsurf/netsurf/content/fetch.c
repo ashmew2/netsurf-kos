@@ -676,7 +676,6 @@ void
 fetch_send_callback(const fetch_msg *msg, struct fetch *fetch)
 {
 	DBG("Inside fetch_send_callback\n");
-	__menuet__debug_out("7777foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
 	fetch->callback(msg, fetch->p);
 	DBG("After fetch->callback \n");
 }

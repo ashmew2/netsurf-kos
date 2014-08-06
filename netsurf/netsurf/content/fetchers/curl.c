@@ -445,7 +445,7 @@ void fetch_curl_finalise(lwc_string *scheme)
 		/* All the fetchers have been finalised. */
 		LOG(("All cURL fetchers finalised, closing down cURL"));
 
-	/* TODO: Add any clean up functions for httplib here. */
+		/* TODO: Add any clean up functions for httplib here. */
 		/* curl_easy_cleanup now contains http_free()  */
 
 		/* curl_easy_cleanup(fetch_blank_curl); */
@@ -502,9 +502,12 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 	int i;
 	
 	fetch = malloc(sizeof (*fetch));
-	if (fetch == NULL)
-		return 0;
 
+	if (fetch == NULL)
+	  {
+	    LOG(("Fetch was NULL. Aborting fetch_curl_setup"));
+	    return 0;
+	  }
 	fetch->fetch_handle = parent_fetch;
 
 	LOG(("fetch %p, url '%s'", fetch, nsurl_access(url)));
@@ -1255,8 +1258,8 @@ void fetch_curl_done(struct fetch_info_slist *node)
 		}
 		fetch_send_callback(&msg, f->fetch_handle);
 	}
-
-	fetch_free(f->fetch_handle);
+	
+	fetch_free(f->fetch_handle);	
 }
 
 
@@ -1328,10 +1331,10 @@ int fetch_curl_ignore_debug(struct http_msg *handle,
 	return 0;
 }
 
-void send_header_callbacks(char *header, unsigned int header_length)
+void send_header_callbacks(char *header, unsigned int header_length, struct curl_fetch_info *f)
 {
   fetch_msg msg;
-  int prev_newline = -1, newline = 0;
+  int newline = 0;
   int i;
 
   msg.type = FETCH_HEADER;
@@ -1340,14 +1343,15 @@ void send_header_callbacks(char *header, unsigned int header_length)
     {
       if(header[i] == '\n')
 	{
-	  prev_newline = i;
+	  msg.data.header_or_data.len = i - newline;
+	  msg.data.header_or_data.buf = (const uint8_t *) (header + newline);
+	  LOG(("buf inside send_header_cb is : %.*s\n", i - newline, header+newline));
+
+	  newline = i+1;
+	  fetch_send_callback(&msg, f->fetch_handle);
 	}
-      msg.data.header_or_data.buf = (const uint8_t *) content_type;
-      msg.data.header_or_data.len = strlen(content_type);
-      fetch_send_callback(&msg, f->fetch_handle);
     }
 }
-
 
 /**
  * Callback function for cURL.
@@ -1418,20 +1422,14 @@ size_t fetch_curl_data(void *_f)
 	
 	if(f->http_code == 200)
 	  {
-	    char *content_type;	    
-	    send_header_callbacks(&f->curl_handle->header, f->curl_handle->header_length);
-
-	    convert_to_asciiz("content-type", http_find_header_field(f->curl_handle, "content-type"), &content_type);
-	    
-	    msg.type = FETCH_HEADER;
-	    msg.data.header_or_data.buf = (const uint8_t *) content_type;
-	    msg.data.header_or_data.len = strlen(content_type);
-	    fetch_send_callback(&msg, f->fetch_handle);
+	    send_header_callbacks(&f->curl_handle->header, f->curl_handle->header_length, f); 
+	    LOG(("Finished sending header callbacks\n"));
 	  }
 
 	msg.type = FETCH_DATA;
 	msg.data.header_or_data.buf = (const uint8_t *) data;
 	msg.data.header_or_data.len = (size_t)f->curl_handle->content_received;
+	LOG(("FETCH_DATA with buf = %s and length = %u", msg.data.header_or_data.buf, msg.data.header_or_data.len));
 	fetch_send_callback(&msg, f->fetch_handle);
 
 	__menuet__debug_out("After Calling callback_send_fetch\n in fetch_curl_data");

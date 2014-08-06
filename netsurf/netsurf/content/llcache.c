@@ -1657,7 +1657,6 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	case FETCH_REDIRECT:
 		/* Request resulted in a redirect */
 	  DBG("FETCH_REDIRECT in llcache\n");
-	  __menuet__debug_out("8888foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n");
 		/* Release candidate, if any */
 		if (object->candidate != NULL) {
 			object->candidate->candidate_count--;

@@ -1460,6 +1460,7 @@ html_convert_css_callback(hlcache_handle *css,
 	case CONTENT_MSG_DONE:
 		LOG(("done stylesheet slot %d '%s'", i,
 				nsurl_access(hlcache_handle_get_url(css))));
+		LOG(("Decrementing parent"));
 		parent->base.active--;
 		LOG(("%d fetches active", parent->base.active));
 		break;
@@ -1494,7 +1495,12 @@ html_convert_css_callback(hlcache_handle *css,
 	}
 
 	if (parent->base.active == 0)
-		html_finish_conversion(parent);
+	  {
+	    LOG(("parent->base.active == 0"));
+	    html_finish_conversion(parent);
+	  }
+	
+	LOG(("Returning NSERROR_OK from html_redraw"));
 
 	return NSERROR_OK;
 }

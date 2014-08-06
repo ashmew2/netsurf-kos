@@ -514,8 +514,9 @@ nserror hlcache_llcache_callback(llcache_handle *handle,
 	hlcache_retrieval_ctx *ctx = pw;
 	lwc_string *effective_type = NULL;
 	nserror error;
-
+	LOG(("Asserting ctx->llcache == handle"));
 	assert(ctx->llcache == handle);
+	LOG(("After Asserting ctx->llcache == handle"));
 
 	switch (event->type) {
 	case LLCACHE_EVENT_HAD_HEADERS:
@@ -576,7 +577,6 @@ nserror hlcache_llcache_callback(llcache_handle *handle,
 
 			hlevent.type = CONTENT_MSG_ERROR;
 			hlevent.data.error = messages_get("BadType");
-
 			ctx->handle->cb(ctx->handle, &hlevent, ctx->handle->pw);
 		}
 		break;
@@ -593,7 +593,7 @@ nserror hlcache_llcache_callback(llcache_handle *handle,
 	case LLCACHE_EVENT_PROGRESS:
 		break;
 	}
-
+	LOG(("Returning OK from hlcache_llcache_callback"));
 	return NSERROR_OK;
 }
 
@@ -813,13 +813,14 @@ nserror hlcache_find_content(hlcache_retrieval_ctx *ctx,
 			}
 
 			if (ctx->handle->cb != NULL) {
+			  LOG(("Calling with CONTENT_MSG_DONE"));
 				event.type = CONTENT_MSG_DONE;
 				ctx->handle->cb(ctx->handle, &event,
 						ctx->handle->pw);
 			}
 		}
 	}
-
+	LOG(("Returning.")); 
 	return error;
 }
 
