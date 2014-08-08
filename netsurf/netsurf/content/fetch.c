@@ -675,9 +675,9 @@ void fetch_multipart_data_destroy(struct fetch_multipart_data *list)
 void
 fetch_send_callback(const fetch_msg *msg, struct fetch *fetch)
 {
-	DBG("Inside fetch_send_callback\n");
+  LOG(("Inside fetch_send_callback.\n"));
 	fetch->callback(msg, fetch->p);
-	DBG("After fetch->callback \n");
+	LOG(("After fetch->callback \n"));
 }
 
 
