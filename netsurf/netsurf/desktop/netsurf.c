@@ -252,7 +252,8 @@ int netsurf_main_loop(void)
 		/* LOG(("CACHE POLL")); */
 		hlcache_poll();
 	}
-
+	fflush(stdout);
+	fflush(stderr);
 	return 0;
 }
 
