@@ -23,8 +23,10 @@ extern "C" {
 #define UINT_MAX 4294967295U
 #define ULONG_MAX 4294967295UL
 #define USHRT_MAX 65535
+#ifndef WCHAR_MIN
 #define WCHAR_MIN 0
 #define WCHAR_MAX 127
+#endif
 //#define WINT_MIN 0
 //#define WINT_MAX 32767
 
