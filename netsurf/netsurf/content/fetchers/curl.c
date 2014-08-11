@@ -1032,35 +1032,49 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 {
 	int running, queue;
 	KOSHMcode codem;
-	/* KOSHMsg *curl_msg; */
 
-	/*TODO: Probably the best way is to combine both loops and use http_process to judge finished transfers*/
-	
-	/* LOG(("Inside fetch_curl_poll\n")); */
-	/* do any possible work on the current fetches */
-
-	/* do { */
-	  /* TODO: Replace curl_multi_perform function. This is the master function. */
-
-	  /* DBG(("Calling curl_multi_perform\n")); */
-	/* LOG(("fetch_curl_multi : %u", fetch_curl_multi)); */
 	if(!fetch_curl_multi)
 	  LOG(("fetch_curl_multi is NULL"));
 	else
-	  {
-	    codem.code = curl_multi_perform(fetch_curl_multi);
+	  {	    
+	    struct fetch_info_slist *temp = fetch_curl_multi;
 	    
+	    curl_multi_perform(fetch_curl_multi);
 	    
-	    if (codem.code != CURLM_OK && codem.code != CURLM_CALL_MULTI_PERFORM) {
-		  
-	      /* warn_user("MiscError", curl_multi_strerror(codem)); */
-	      
-	      LOG(("curl_multi_perform screwed up."));
-	      warn_user("MiscError", "curl_multi_strerror is not written yet");
-	      
-	      return;
-	    }
+	    while(temp)
+	      {
+		struct fetch_info_slist *new_temp = temp->next;
+
+		/* Check if the headers were received. thanks hidnplayr :P */
+		if ((temp->handle->flags & FLAG_GOT_HEADER) && (!temp->fetch_curl_header_called)) 
+		  {
+		    fetch_curl_header(temp->fetch_info);	
+		    temp->fetch_curl_header_called = true;
+		  }
+		
+		if(temp->handle->flags & FLAG_GOT_ALL_DATA) /* FLAG_GOT_ALL_DATA is set */
+		  {
+		    /* DBG(("calling fetch_curl_data")); */
+		    /* LOG(("content in handle is : %s", temp->handle->content_ptr)); */		    		    
+		    fetch_curl_data(temp->fetch_info);
+		    fetch_curl_done(temp);
+		    fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, temp->fetch_info);	    
+		  }
+
+		/*Add Error FLAG handle here TODO*/
+		
+		temp = new_temp;
+	      }
 	  }
+      /* TODO: Add more flags here */	  
+      
+      /*TODO: Handle various conditions here, and set the status code accordinpgly when 
+	calling fetch_curL_done
+      */
+      
+      /* TODO: Probably decide the condition of the fetch here */
+      
+      /* The whole data recieved is shown by FLAG_GOT_ALL_DATA that is 1 SHL 2, meaning 4. Check for it right here. */	  	  
 
 	/* process curl results */
 	/*TODO: Needs to be replaced , no idea how to do it right now */
@@ -1115,7 +1129,6 @@ void fetch_curl_done(struct fetch_info_slist *node)
 
 	/* TODO: Remove this definition and get a better replacement for CURLINFO_PRIVATE */
 	
-	int CURLINFO_PRIVATE = 20;
 	/* struct cert_info certs[MAX_CERTS]; */
 	/* memset(certs, 0, sizeof(certs)); */
 
@@ -1722,7 +1735,6 @@ bool fetch_curl_process_headers(struct curl_fetch_info *f)
 	
 	http_code = f->curl_handle->status;
 	LOG(("Inside fetch_curl_process_headers..HTTP CODE : %ld\n", http_code));
-	/* __menuet__debug_out("3333foobar asuiddhaiusdhaiu-=-=-=-=-=-=-\n"); */
 
 	if (!f->http_code)
 	  {
@@ -2056,54 +2068,11 @@ struct http_msg * curl_easy_init(void)
 int curl_multi_perform(struct fetch_info_slist *multi_list)
 {
   struct fetch_info_slist *temp = multi_list;
-  /* LOG(("fetch_curl_multi : %u", multi_list)); */
   
   while(temp) {
-    int process_status = http_process(temp->handle);
-
-    if ((temp->handle->flags & FLAG_GOT_HEADER) && (!temp->fetch_curl_header_called)) /* Check if the headers were received. thanks hidnplayr :P */
-      {
-	LOG(("Calling fetch_curl_header..."));
-	fetch_curl_header(temp->fetch_info);	
-	temp->fetch_curl_header_called = true;
-      }
-    
-    if(process_status == 0) 	  /* Handle done doing it's job , http_process returned 0*/
-      {
-	/* TODO: Add more flags here */	  
-	if(temp->handle->flags & FLAG_GOT_ALL_DATA) /* FLAG_GOT_ALL_DATA is set */
-	  {
-	    DBG("calling fetch_curl_data in curl_multi_perform\n");
-	    /* LOG(("content in handle is : %s", temp->handle->content_ptr)); */
-
-	    if(temp->fetch_info->had_headers)
-	      __menuet__debug_out("curl_multi_perform before fetch_data : Had headers is true!\n");
-	    else
-	      __menuet__debug_out("curl_multi_perform before fetch_data : Had headers is false!\n");
-
-	    fetch_curl_data(temp->fetch_info);
-	    __menuet__debug_out("Calling fetch_curl_done from multi_perform now\n");
-	    fetch_curl_done(temp);
-	    __menuet__debug_out("Calling curl_multi_remove from multi_perform now\n");
-
-	    fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, temp->fetch_info);	    
-	  }
-	else
-	  LOG(("http_process is 0 but DATA GOT ALL FLAG is not set. Error?"));
-
-	/*TODO: Handle various conditions here, and set the status code accordinpgly when 
-	  calling fetch_curL_done
-	*/
-	
-	/* TODO: Probably decide the condition of the fetch here */
-	
-	/* The whole data recieved is shown by FLAG_GOT_ALL_DATA that is 1 SHL 2, meaning 4. Check for it right here. */	  
-      }
-    
+    http_process(temp->handle);      
     temp = temp->next;
   }
-  
-  /* DBG("Leaving curl_multi_perform\n"); */
 }
 
 void curl_easy_cleanup(struct http_msg *handle)
