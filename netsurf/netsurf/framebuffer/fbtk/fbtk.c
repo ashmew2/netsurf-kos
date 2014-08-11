@@ -60,7 +60,7 @@ dump_tk_tree(fbtk_widget_t *widget)
 	int indent = 0;
 
 	while (widget != NULL) {
-		LOG(("%*s%p", indent, "", widget));
+		/* LOG(("%*s%p", indent, "", widget)); */
 		if (widget->first_child != NULL) {
 			widget = widget->first_child;
 			indent += 6;
@@ -107,12 +107,12 @@ fbtk_request_redraw(fbtk_widget_t *widget)
 	widget->redraw.width = widget->width;
 	widget->redraw.height = widget->height;
 
-	LOG(("redrawing %p %d,%d %d,%d",
-	     widget,
-	     widget->redraw.x,
-	     widget->redraw.y,
-	     widget->redraw.width,
-	     widget->redraw.height));
+	/* LOG(("redrawing %p %d,%d %d,%d", */
+	/*      widget, */
+	/*      widget->redraw.x, */
+	/*      widget->redraw.y, */
+	/*      widget->redraw.width, */
+	/*      widget->redraw.height)); */
 
 	cwidget = widget->last_child;
 	while (cwidget != NULL) {
@@ -132,7 +132,7 @@ fbtk_request_redraw(fbtk_widget_t *widget)
 int
 fbtk_set_mapping(fbtk_widget_t *widget, bool map)
 {
-	LOG(("setting mapping on %p to %d", widget, map));
+	/* LOG(("setting mapping on %p to %d", widget, map)); */
 	widget->mapped = map;
 	if (map) {
 		fbtk_request_redraw(widget);
@@ -154,7 +154,7 @@ swap_siblings(fbtk_widget_t *lw)
 	fbtk_widget_t *after;
 
 	rw = lw->next;
-	LOG(("Swapping %p with %p", lw, rw));
+	/* LOG(("Swapping %p with %p", lw, rw)); */
 	before = lw->prev;
 	after = rw->next;
 
@@ -401,7 +401,7 @@ fbtk_get_root_widget(fbtk_widget_t *widget)
 
 	/* check root widget was found */
 	if (widget->type != FB_WIDGET_TYPE_ROOT) {
-		LOG(("Widget with null parent that is not the root widget!"));
+		/* LOG(("Widget with null parent that is not the root widget!")); */
 		return NULL;
 	}
 
@@ -537,7 +537,7 @@ fbtk_widget_new(fbtk_widget_t *parent,
 	fbtk_widget_t *neww; /* new widget */
 
 	if (parent == NULL)
-	{LOG(("parent null..."));
+	{/* LOG(("parent null...")); */
 		return NULL;}
 
 	/* LOG(("calloc...")); */
@@ -546,7 +546,7 @@ fbtk_widget_new(fbtk_widget_t *parent,
 		return NULL;
 
 	/* LOG(("super!...")); */
-	LOG(("creating %p %d,%d %d,%d", neww, x, y, width, height));
+	/* LOG(("creating %p %d,%d %d,%d", neww, x, y, width, height)); */
 
 	/* make new window fit inside parent */
 	if (width == 0) {
@@ -568,7 +568,7 @@ fbtk_widget_new(fbtk_widget_t *parent,
 	}
 
 
-	LOG(("using %p %d,%d %d,%d", neww, x, y, width, height));
+	/* LOG(("using %p %d,%d %d,%d", neww, x, y, width, height)); */
 	/* set values */
 	neww->type = type;
 	neww->x = x;
@@ -578,23 +578,23 @@ fbtk_widget_new(fbtk_widget_t *parent,
 
 	/* insert into widget heiarchy */
 
-	LOG(("into hierarchy..."));
+	/* LOG(("into hierarchy...")); */
 	neww->parent = parent;
 
 	if (parent->first_child == NULL) {
 		/* no child widgets yet */
-		LOG(("no childs yet..."));
+		/* LOG(("no childs yet...")); */
 		parent->last_child = neww;
 	} else {
 		/* add new widget to front of sibling chain */
 		neww->next = parent->first_child;
 		neww->next->prev = neww;
-		LOG(("n front of sibling..."));
+		/* LOG(("n front of sibling...")); */
 	}
 	parent->first_child = neww;
 
 
-	LOG(("Widget OK..."));
+	/* LOG(("Widget OK...")); */
 	return neww;
 }
 
@@ -636,9 +636,9 @@ do_redraw(nsfb_t *nsfb, fbtk_widget_t *widget)
 		plot_ctx.x1 = plot_ctx.x0 + widget->redraw.width;
 		plot_ctx.y1 = plot_ctx.y0 + widget->redraw.height;
 
-		LOG(("clipping %p %d,%d %d,%d",
-		     widget, plot_ctx.x0, plot_ctx.y0,
-		     plot_ctx.x1, plot_ctx.y1));
+		/* LOG(("clipping %p %d,%d %d,%d", */
+		/*      widget, plot_ctx.x0, plot_ctx.y0, */
+		/*      plot_ctx.x1, plot_ctx.y1)); */
 		if (nsfb_plot_set_clip(nsfb, &plot_ctx) == true) {
 			
 	/* LOG(("POST CALLBACK")); */

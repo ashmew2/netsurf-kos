@@ -114,7 +114,7 @@ nsurl *gui_get_resource_url(const char *path)
 
 	raw = path_to_url(filepath_sfind(respaths, buf, path));
 	
-	LOG(("Findfile gui: %s", raw));
+	LOG(("Findfile gui: path is %s, raw is %s", path, raw));
 	if (raw != NULL) {
 		nsurl_create(raw, &url);
 		free(raw);

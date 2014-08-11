@@ -552,11 +552,11 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 	/* TODO : Write an implementation for curl_slist_append for adding and appending fields to header*/
 	/* This is done for now */
 
-#define APPEND(list, value) \
-	slist = curl_slist_append(list, value);		\
-	if (slist == NULL)				\
-		goto failed;				\
-	list = slist;
+/* #define APPEND(list, value) \ */
+/* 	slist = curl_slist_append(list, value);		\ */
+/* 	if (slist == NULL)				\ */
+/* 		goto failed;				\ */
+/* 	list = slist; */
 	
 	/*TODO : This section will need some work because we don't use curl headers but use the ones
 	  provided by http.obj which does not necessarily include the same prefed headers
@@ -568,32 +568,32 @@ void * fetch_curl_setup(struct fetch *parent_fetch, nsurl *url,
 	 * which fails with lighttpd, so disable it (see bug 1429054) */
 	/* APPEND(fetch->headers, "Expect:"); */
 
-	if ((nsoption_charp(accept_language) != NULL) && 
-	    (nsoption_charp(accept_language)[0] != '\0')) {
-		char s[80];
-		snprintf(s, sizeof s, "Accept-Language: %s, *;q=0.1",
-			 nsoption_charp(accept_language));
-		s[sizeof s - 1] = 0;
-		APPEND(fetch->headers, s);
-	}
+	/* if ((nsoption_charp(accept_language) != NULL) &&  */
+	/*     (nsoption_charp(accept_language)[0] != '\0')) { */
+	/* 	char s[80]; */
+	/* 	snprintf(s, sizeof s, "Accept-Language: %s, *;q=0.1", */
+	/* 		 nsoption_charp(accept_language)); */
+	/* 	s[sizeof s - 1] = 0; */
+	/* 	APPEND(fetch->headers, s); */
+/* } */
 
-	if (nsoption_charp(accept_charset) != NULL && 
-	    nsoption_charp(accept_charset)[0] != '\0') {
-		char s[80];
-		snprintf(s, sizeof s, "Accept-Charset: %s, *;q=0.1",
-			 nsoption_charp(accept_charset));
-		s[sizeof s - 1] = 0;
-		APPEND(fetch->headers, s);
-	}
+/* 	if (nsoption_charp(accept_charset) != NULL &&  */
+/* 	    nsoption_charp(accept_charset)[0] != '\0') { */
+/* 		char s[80]; */
+/* 		snprintf(s, sizeof s, "Accept-Charset: %s, *;q=0.1", */
+/* 			 nsoption_charp(accept_charset)); */
+/* 		s[sizeof s - 1] = 0; */
+/* 		APPEND(fetch->headers, s); */
+/* 	} */
 
-	if (nsoption_bool(do_not_track) == true) {
-		APPEND(fetch->headers, "DNT: 1");
-	}
+/* 	if (nsoption_bool(do_not_track) == true) { */
+/* 		APPEND(fetch->headers, "DNT: 1"); */
+/* 	} */
 
-	/* And add any headers specified by the caller */
-	for (i = 0; headers[i] != NULL; i++) {
-		APPEND(fetch->headers, headers[i]);
-	}
+/* 	/\* And add any headers specified by the caller *\/ */
+/* 	for (i = 0; headers[i] != NULL; i++) { */
+/* 		APPEND(fetch->headers, headers[i]); */
+/* 	} */
 
 	return fetch;
 
@@ -667,10 +667,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	  return NULL;
 	}
 	
-	DBG("Calling http_get with : ");
-	DBG(zz);
-	DBG("\n");
-	DBG("\n");
+	LOG(("http_get on %s", zz));
 
 	/*TODO : Always clear the flags for the handle here*/	
 	
@@ -825,7 +822,7 @@ fetch_curl_set_options(struct curl_fetch_info *f)
 /* 	} */
 
 
- 	f->cookie_string = urldb_get_cookie(f->url, true); 
+ 	/* f->cookie_string = urldb_get_cookie(f->url, true);  */
 
 
 /* 	if (f->cookie_string) { */
@@ -966,15 +963,21 @@ void fetch_curl_stop(struct fetch_info_slist *node)
 	if (f->curl_handle) {
 		/* remove from curl multi handle */
 	  /*TODO: Need a replacement for curl_multi_remove_handle function*/
-	  
-		fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, f); /* Remove the node. More efficient  */
+	  	/* LOG(("fetch_curl_multi : %u", fetch_curl_multi)); */
+		fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, f);
 		/* assert(codem.code == CURLM_OK); */
 		/* Put this curl handle into the cache if wanted. */
-		fetch_curl_cache_handle(f->curl_handle, f->host);
+		/* TODO: Cache? */
+		/* fetch_curl_cache_handle(f->curl_handle, f->host); */
+
+		if(f && f->curl_handle) 
+		  http_free(f->curl_handle);
+
 		f->curl_handle = 0;
 	}
 
 	fetch_remove_from_queues(f->fetch_handle);
+	LOG(("Returning"));
 }
 
 
@@ -1040,20 +1043,24 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 	  /* TODO: Replace curl_multi_perform function. This is the master function. */
 
 	  /* DBG(("Calling curl_multi_perform\n")); */
-	  
-	  codem.code = curl_multi_perform(fetch_curl_multi);
-		if (codem.code != CURLM_OK && codem.code != CURLM_CALL_MULTI_PERFORM) {
-		  /* 			LOG(("curl_multi_perform: %i %s", */
-		  /* 					codem, curl_multi_strerror(codem))); */
+	/* LOG(("fetch_curl_multi : %u", fetch_curl_multi)); */
+	if(!fetch_curl_multi)
+	  LOG(("fetch_curl_multi is NULL"));
+	else
+	  {
+	    codem.code = curl_multi_perform(fetch_curl_multi);
+	    
+	    
+	    if (codem.code != CURLM_OK && codem.code != CURLM_CALL_MULTI_PERFORM) {
 		  
-		  /* warn_user("MiscError", curl_multi_strerror(codem)); */
-
-		  LOG(("curl_multi_perform screwed up."));
-		  warn_user("MiscError", "curl_multi_strerror is not written yet");
-
-			return;
-		}
-	/* } while (codem.code == CURLM_CALL_MULTI_PERFORM); */
+	      /* warn_user("MiscError", curl_multi_strerror(codem)); */
+	      
+	      LOG(("curl_multi_perform screwed up."));
+	      warn_user("MiscError", "curl_multi_strerror is not written yet");
+	      
+	      return;
+	    }
+	  }
 
 	/* process curl results */
 	/*TODO: Needs to be replaced , no idea how to do it right now */
@@ -1161,7 +1168,7 @@ void fetch_curl_done(struct fetch_info_slist *node)
 	}
 
 	fetch_curl_stop(node);
-
+	
 	if (abort_fetch)
 		; /* fetch was aborted: no callback */
 	else if (finished) {
@@ -1260,6 +1267,7 @@ void fetch_curl_done(struct fetch_info_slist *node)
 	}
 	
 	fetch_free(f->fetch_handle);	
+	LOG(("Returning"));
 }
 
 
@@ -1345,7 +1353,7 @@ void send_header_callbacks(char *header, unsigned int header_length, struct curl
 	{
 	  msg.data.header_or_data.len = i - newline;
 	  msg.data.header_or_data.buf = (const uint8_t *) (header + newline);
-	  LOG(("buf inside send_header_cb is : %.*s\n", i - newline, header+newline));
+	  /* LOG(("buf inside send_header_cb is : %.*s\n", i - newline, header+newline)); */
 
 	  newline = i+1;
 	  fetch_send_callback(&msg, f->fetch_handle);
@@ -1424,23 +1432,29 @@ size_t fetch_curl_data(void *_f)
 	  {
 	    send_header_callbacks(&f->curl_handle->header, f->curl_handle->header_length, f); 
 	    LOG(("Finished sending header callbacks\n"));
+
+	    if (f->abort) {
+	      f->stopped = true;
+	      return 0;	     
+	    }
 	  }
+	else
+	  LOG(("Error, http_code is not 200 but is : %u", f->http_code));
 
 	msg.type = FETCH_DATA;
 	msg.data.header_or_data.buf = (const uint8_t *) data;
 	msg.data.header_or_data.len = (size_t)f->curl_handle->content_received;
-	LOG(("FETCH_DATA with buf = %s and length = %u", msg.data.header_or_data.buf, msg.data.header_or_data.len));
+	/* LOG(("FETCH_DATA with buf = %s and length = %u", msg.data.header_or_data.buf, msg.data.header_or_data.len)); */
 	fetch_send_callback(&msg, f->fetch_handle);
 
-	__menuet__debug_out("After Calling callback_send_fetch\n in fetch_curl_data");
+	/* __menuet__debug_out("After Calling callback_send_fetch\n in fetch_curl_data"); */
 
 	if (f->abort) {
-	  __menuet__debug_out("f->abort is true. Returning 0 from fetch_curl_data");
 		f->stopped = true;
 		return 0;
 	}
 
-	__menuet__debug_out("Exiting fetch_curl_data");
+	/* __menuet__debug_out("Exiting fetch_curl_data"); */
 	/* return size * nmemb; */
 }
 
@@ -1524,31 +1538,39 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 
 	LOG(("fetch->http_code is  : %ld\n", f->http_code));
 
-	if(f->had_headers)
-	  __menuet__debug_out("curl_fetch_data BEFORE: Had headers is true!\n");
-	else
-	  __menuet__debug_out("curl_fetch_data BEFORE: Had headers is false!\n");
+	convert_to_asciiz(NULL,http_find_header_field(f->curl_handle, "location"), &f->location); 
+	convert_to_asciiz("content-length", http_find_header_field(f->curl_handle, "content-length"), &content_length);
+	convert_to_asciiz("set-cookie", http_find_header_field(f->curl_handle, "set-cookie"), &cookie); 
 	
-	LOG(("Calling fetch_send_callback from fetch_curl_header"));
-	fetch_send_callback(&msg, f->fetch_handle);
-	LOG(("AFTER Calling fetch_send_callback from fetch_curl_header"));	
+	f->content_length = atol(content_length);
 
-	if(f->had_headers)
-	  __menuet__debug_out("curl_fetch_data : Had headers is true!\n");
-	else
-	  __menuet__debug_out("curl_fetch_data : Had headers is false!\n");
+	if(cookie)
+	  fetch_set_cookie(f->fetch_handle, cookie);
+	return;
+	/* if(f->had_headers) */
+	/*   __menuet__debug_out("curl_fetch_data BEFORE: Had headers is true!\n"); */
+	/* else */
+	/*   __menuet__debug_out("curl_fetch_data BEFORE: Had headers is false!\n"); */
+	
+	/* LOG(("Calling fetch_send_callback from fetch_curl_header")); */
+	/* fetch_send_callback(&msg, f->fetch_handle); */
+	/* LOG(("AFTER Calling fetch_send_callback from fetch_curl_header"));	 */
+
+	/* if(f->had_headers) */
+	/*   __menuet__debug_out("curl_fetch_data : Had headers is true!\n"); */
+	/* else */
+	/*   __menuet__debug_out("curl_fetch_data : Had headers is false!\n"); */
 
 	/* Remember to use lower case names for header field names for http.obj */
 	/* We extract only these fields */
-	convert_to_asciiz(NULL,http_find_header_field(f->curl_handle, "location"), &f->location);
-	convert_to_asciiz("content-length", http_find_header_field(f->curl_handle, "content-length"), &content_length);
-	convert_to_asciiz("content-type", http_find_header_field(f->curl_handle, "content-type"), &content_type);
-	convert_to_asciiz("set-cookie", http_find_header_field(f->curl_handle, "set-cookie"), &cookie);
+
+	/* convert_to_asciiz("content-length", http_find_header_field(f->curl_handle, "content-length"), &content_length); */
+	/* convert_to_asciiz("content-type", http_find_header_field(f->curl_handle, "content-type"), &content_type); */
 	
 	/* TODO: Uncomment following line and add more fields if required later */
 	/* convert_to_asciiz("www-authenticate", http_find_header_field(f->curl_handle, "www-authenticate"), &realm); */
 
-	LOG(("The &header is : %s", &(f->curl_handle->header)));
+	/* LOG(("The &header is : %s", &(f->curl_handle->header))); */
 
 	/* if(f->location) */
 	/*   { */
@@ -1588,34 +1610,34 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	/*     fetch_send_callback(&msg, f->fetch_handle);	     */
 	/*   } */
 
-	if(realm) /* Don't worry about this for now , fix it later TODO */
-	  {    
-	    /* For getting the realm, this was used as an example : ('WWW-Authenticate: Basic realm="My Realm"')  */	   
+	/* if(realm) /\* Don't worry about this for now , fix it later TODO *\/ */
+	/*   {     */
+	/*     /\* For getting the realm, this was used as an example : ('WWW-Authenticate: Basic realm="My Realm"')  *\/	    */
 	    
-	    for(i = strlen("www-authenticate: "); realm[i]; i++)
-	      if(realm[i] == '"') {
-		realm_start = i+1;
-		break;
-	      }		
+	/*     for(i = strlen("www-authenticate: "); realm[i]; i++) */
+	/*       if(realm[i] == '"') { */
+	/* 	realm_start = i+1; */
+	/* 	break; */
+	/*       }		 */
 	    
-	    for(i = realm_start ; realm[i]; i++)
-	      if(realm[i] == '"') {
-		realm[i] = '\0';
-		break;
-	      }
+	/*     for(i = realm_start ; realm[i]; i++) */
+	/*       if(realm[i] == '"') { */
+	/* 	realm[i] = '\0'; */
+	/* 	break; */
+	/*       } */
 	   
-	    f->realm = realm;
-	  }	
+	/*     f->realm = realm; */
+	/*   }	 */
 
  /* TODO: call the fetch_callback for www authenticate field and any other fields that will be added here later */
 
-	LOG(("fetch->http_code is  ( AT THE END of f_c_header): %ld\n", f->http_code));
-	__menuet__debug_out("Leaving fetch_curl_header\n");
+	/* LOG(("fetch->http_code is  ( AT THE END of f_c_header): %ld\n", f->http_code)); */
+	/* __menuet__debug_out("Leaving fetch_curl_header\n"); */
 	
-	if(f->had_headers)
-	  __menuet__debug_out("curl_fetch_data : Had headers is true!\n");
-	else
-	  __menuet__debug_out("curl_fetch_data : Had headers is false!\n");
+	/* if(f->had_headers) */
+	/*   __menuet__debug_out("curl_fetch_data : Had headers is true!\n"); */
+	/* else */
+	/*   __menuet__debug_out("curl_fetch_data : Had headers is false!\n"); */
 	
 	/* f->http_code = handle->status; */
 	/* fetch_set_http_code(f->fetch_handle, f->http_code); */
@@ -1966,9 +1988,7 @@ int curl_multi_add_handle(struct fetch_info_slist **multi_handle, struct curl_fe
       new_node->fetch_curl_header_called = false;
       temp->next = new_node;
     }
-
   
-
   return CURLM_OK;
 }
 
@@ -1984,8 +2004,11 @@ LTG
 struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi_handle, struct curl_fetch_info *fetch_to_delete)
 {
   struct fetch_info_slist *temp = multi_handle;
+  char *zz;
+  int pr;
 
-  DBG("Inside curl_multi_remove_handle..\n");
+  nsurl_get(fetch_to_delete->url, NSURL_WITH_FRAGMENT, &zz, &pr);
+  LOG(("inside curl_multi_remove_handle for %s..\n", zz));
 
   if(multi_handle == NULL || fetch_to_delete == NULL)
     return multi_handle;
@@ -1993,7 +2016,7 @@ struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi
   if(temp->fetch_info == fetch_to_delete) /* special case for first node deletion */
     {      
       multi_handle = multi_handle->next;
-      DBG("Removed handle\n");
+      LOG(("Removed handle\n"));
       /* free(temp);       */ /* Probably shouldnt free. Let other routines free this TODO */
     }
   else /* If the data is present in any consecutive node */
@@ -2006,7 +2029,7 @@ struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi
 	    {	      	      
 	      temp->next = temp2->next;
 	      /* free(temp2); */ /* Shouldnt free node here. Let others handle it (for cache etc). */
-	      DBG("Removed handle\n");
+	      LOG(("Removed handle\n"));
 	      break;
 	    }
 	  else
@@ -2016,6 +2039,7 @@ struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi
 	    }
 	}   
     }
+  LOG(("Returning"));
   /*TODO : http_free should be called here?*/
   return multi_handle;
 }
@@ -2025,52 +2049,20 @@ struct fetch_info_slist *curl_multi_remove_handle(struct fetch_info_slist *multi
  /* TODO: Actually a function to return a blank handle. The name is misleading right now */
 struct http_msg * curl_easy_init(void)
 {
-  struct http_msg *new_handle; /* = (struct http_msg *)malloc(sizeof(struct http_msg)); */
-  
-  /* if(new_handle == NULL) */
-  /*   return NULL; */
-  
-  /* new_handle->socket = 0; */
-  /* new_handle->flags = 0; */
-  /* new_handle->write_ptr = 0; */
-  /* new_handle->buffer_length = 0; */
-  /* new_handle->chunk_ptr = 0; */
-  /* new_handle->timestamp = 0; */
-
-  /* new_handle->status = 0; */
-  /* new_handle->header_length = 0; */
-  /* new_handle->content_ptr = 0; */
-  /* new_handle->content_length = 0; */
-  /* new_handle->content_received = 0; */
-  /* new_handle->header = 0;  */
-  
+  struct http_msg *new_handle;    
   return new_handle;
 }
 
 int curl_multi_perform(struct fetch_info_slist *multi_list)
 {
   struct fetch_info_slist *temp = multi_list;
-  struct fetch_info_slist *temp_prev = temp;
-
-  /* LOG(("Inside curl_multi_perform")); */
-  /* DBG("inside curl_multi_perform()..\n"); */
-
+  /* LOG(("fetch_curl_multi : %u", multi_list)); */
+  
   while(temp) {
-/*http_get should be used here? TODO*/
-    /* Should we check if handle is NULL? It was checked during init TODO */
     int process_status = http_process(temp->handle);
-    /* LOG(("Processed for %u fetch->url = %s, received : %u", temp->handle, temp->fetch_info->url, temp->handle->content_received)); */    
-    /* LOG(("Flags for temp in curL_multi_perform : %u\n", temp->handle->flags)); */
-    
+
     if ((temp->handle->flags & FLAG_GOT_HEADER) && (!temp->fetch_curl_header_called)) /* Check if the headers were received. thanks hidnplayr :P */
       {
-	/* LOG(("[wererat]flags inside perform() on handle (%u): %u\n", temp->handle, temp->handle->flags)); */
-	/* DBG("Calling fetch_curl_header\n"); */
-	
-	/* if(temp->fetch_info->had_headers) */
-	/*   __menuet__debug_out("curl_multi_perform : Had headers is true!\n"); */
-	/* else */
-	/*   __menuet__debug_out("curl_multi_perform : Had headers is false!\n"); */
 	LOG(("Calling fetch_curl_header..."));
 	fetch_curl_header(temp->fetch_info);	
 	temp->fetch_curl_header_called = true;
@@ -2096,6 +2088,9 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 
 	    fetch_curl_multi = curl_multi_remove_handle(fetch_curl_multi, temp->fetch_info);	    
 	  }
+	else
+	  LOG(("http_process is 0 but DATA GOT ALL FLAG is not set. Error?"));
+
 	/*TODO: Handle various conditions here, and set the status code accordinpgly when 
 	  calling fetch_curL_done
 	*/
@@ -2105,7 +2100,6 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
 	/* The whole data recieved is shown by FLAG_GOT_ALL_DATA that is 1 SHL 2, meaning 4. Check for it right here. */	  
       }
     
-    temp_prev = temp;
     temp = temp->next;
   }
   

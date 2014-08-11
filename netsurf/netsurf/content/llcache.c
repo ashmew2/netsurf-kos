@@ -1634,7 +1634,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	nserror error = NSERROR_OK;
 	llcache_object *object = p;
 	llcache_event event;
-	DBG("Inside llcache_fetch_callback\n");
+	/* DBG("Inside llcache_fetch_callback\n"); */
 
 #ifdef LLCACHE_TRACE
 	LOG(("Fetch event %d for %p", msg->type, object));
@@ -1644,7 +1644,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 
 	switch (msg->type) {
 	case FETCH_HEADER:
-	  DBG("FETCH_HEADER in llcache\n");
+	  /* DBG("FETCH_HEADER in llcache\n"); */
 		/* Received a fetch header */
 		object->fetch.state = LLCACHE_FETCH_HEADERS;
 
@@ -1656,7 +1656,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	/* 3xx responses */
 	case FETCH_REDIRECT:
 		/* Request resulted in a redirect */
-	  DBG("FETCH_REDIRECT in llcache\n");
+	  /* DBG("FETCH_REDIRECT in llcache\n"); */
 		/* Release candidate, if any */
 		if (object->candidate != NULL) {
 			object->candidate->candidate_count--;
@@ -1668,13 +1668,13 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 		break;
 	case FETCH_NOTMODIFIED:
 		/* Conditional request determined that cached object is fresh */
-	  	  DBG("FETCH_NOTMODIFIED in llcache\n");
+	  	  /* DBG("FETCH_NOTMODIFIED in llcache\n"); */
 		error = llcache_fetch_notmodified(object, &object);
 		break;
 
 	/* Normal 2xx state machine */
 	case FETCH_DATA:
-	  	  DBG("FETCH_DATA in llcache\n");
+	  	  /* DBG("FETCH_DATA in llcache\n"); */
 		/* Received some data */
 		if (object->fetch.state != LLCACHE_FETCH_DATA) {
 			/* On entry into this state, check if we need to 
@@ -1717,7 +1717,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	{
 		uint8_t *temp;
 
-		DBG("FETCH_FINISHED in llcache\n");
+		/* DBG("FETCH_FINISHED in llcache\n"); */
 		object->fetch.state = LLCACHE_FETCH_COMPLETE;
 		object->fetch.fetch = NULL;
 
@@ -1738,7 +1738,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 	case FETCH_ERROR:
 		/* An error occurred while fetching */
 		/* The fetch has has already been cleaned up by the fetcher */
-	  	  DBG("FETCH_ERROR in llcache\n");
+	  	  /* DBG("FETCH_ERROR in llcache\n"); */
 		object->fetch.state = LLCACHE_FETCH_COMPLETE;
 		object->fetch.fetch = NULL;
 
@@ -1760,7 +1760,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 		
 		break;
 	case FETCH_PROGRESS:
-	  	  DBG("FETCH_PROGRESS in llcache\n");
+	  	  /* DBG("FETCH_PROGRESS in llcache\n"); */
 		/* Progress update */
 		event.type = LLCACHE_EVENT_PROGRESS;
 		event.data.msg = msg->data.progress;
@@ -1771,7 +1771,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 
 	/* Events requiring action */
 	case FETCH_AUTH:
-	  	  DBG("FETCH_AUTH\n");
+	  	  /* DBG("FETCH_AUTH\n"); */
 		/* Need Authentication */
 
 		/* Release candidate, if any */
@@ -1784,7 +1784,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 		break;
 	case FETCH_CERT_ERR:
 		/* Something went wrong when validating TLS certificates */
-	  DBG("FETCH_CERT_ERR\n");
+	  /* DBG("FETCH_CERT_ERR\n"); */
 		/* Release candidate, if any */
 		if (object->candidate != NULL) {
 			object->candidate->candidate_count--;
@@ -1797,7 +1797,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 		break;
 	case FETCH_SSL_ERR:
 		/* TLS connection setup failed */
-	  DBG("FETCH_SSL_ERR\n");
+	  /* DBG("FETCH_SSL_ERR\n"); */
 		/* Release candidate, if any */
 		if (object->candidate != NULL) {
 			object->candidate->candidate_count--;
@@ -1810,7 +1810,7 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 
 	/* Deal with any errors reported by event handlers */
 	if (error != NSERROR_OK) {
-	  DBG("Error is not NSERROR_OK!\n");
+	  /* DBG("Error is not NSERROR_OK!\n"); */
 		if (object->fetch.fetch != NULL) {
 			fetch_abort(object->fetch.fetch);
 			object->fetch.fetch = NULL;
@@ -1820,10 +1820,10 @@ static void llcache_fetch_callback(const fetch_msg *msg, void *p)
 
 			object->fetch.state = LLCACHE_FETCH_COMPLETE;
 		}
-		DBG("Returning llc_f_cb. (err != NS_OK)\n");
+		/* DBG("Returning llc_f_cb. (err != NS_OK)\n"); */
 		return;
 	}
-	DBG("Returning from llc_f_cb.(err = NS_OK)\n");
+	/* DBG("Returning from llc_f_cb.(err = NS_OK)\n"); */
 }
 
 /**

@@ -314,8 +314,6 @@ void html_finish_conversion(html_content *c)
 	}
 
 	dom_node_unref(html);
-	LOG(("After dom_node_unref"));
-	
 }
 
 
