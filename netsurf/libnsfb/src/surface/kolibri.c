@@ -23,9 +23,12 @@
 
 #include <menuet/os.h>
 
-void __menuet__set_bitfield_for_wanted_events2(__u32 ev){ __asm__ __volatile__("int $0x40"::"a"(40),"b"(ev));}
-
 unsigned char * pixels;
+
+void kol_set_bitfield_for_wanted_events(__u32 ev)
+{ 
+	asm volatile ("int $0x40"::"a"(40),"b"(ev));
+}
 
 inline void f65(unsigned x, unsigned y, unsigned w, unsigned h, char *d)
 {
@@ -55,6 +58,13 @@ unsigned kol_mouse_btn()
     return error;
 }
 
+unsigned kol_wait_for_event_with_timeout(int timeout)	// timeout is in 1/100 seconds
+{
+	unsigned event;
+	asm volatile ("int $0x40":"=a"(event):"a"(23), "b"(timeout));
+	return event;
+}
+
 unsigned kol_scancodes()
 {
     unsigned error;
@@ -62,14 +72,9 @@ unsigned kol_scancodes()
     return error;
 }
 
-
-void kolibri_redraw(nsfb_t *nsfb){
-	
-
+void kolibri_redraw(nsfb_t *nsfb){	
     f65(0,0, nsfb->width, nsfb->height, pixels);
-
 }
-
 
 unsigned kol_skin_h()
 {
@@ -216,8 +221,8 @@ static int kolibri_initialise(nsfb_t *nsfb)
     __menuet__debug_out("Redraw\n");
     kolibri_redraw(nsfb);
 
-    /*Thanks to hidnplayr. This is for setting flags for mcall40 for events read by a window*/
-    __menuet__set_bitfield_for_wanted_events2(EVENT_REDRAW|EVENT_KEY|EVENT_BUTTON|EVENT_MOUSE_CHANGE|(1<<30)|(1<<31));
+    /*This is for setting flags for mcall40 for events read by a window*/
+    kol_set_bitfield_for_wanted_events(EVENT_REDRAW|EVENT_KEY|EVENT_BUTTON|EVENT_MOUSE_CHANGE|(1<<30)|(1<<31)|(1<<7));
 
     return 0;
 }
@@ -335,8 +340,11 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 
     nsfb = nsfb; /* unused */
 
-	
-    got_event = __menuet__check_for_event();
+	if (timeout >= 0) {
+		got_event = kol_wait_for_event_with_timeout(timeout/10);
+	} else {
+		got_event = __menuet__wait_for_event();
+	}
     
     if (got_event == 0) {
         return false;
@@ -344,7 +352,7 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
     
     event->type = NSFB_EVENT_NONE;
 
-    if (got_event==1) { //key pressed
+    if (got_event==1) { //redraw event
 	kolibri_window_redraw(nsfb);	
     }
 
@@ -384,121 +392,69 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 
     }
 	
-    if (got_event==3) { //key pressed
+    if (got_event==3) { //button pressed
 	if (__menuet__get_button_id()==1) kolibri_finalise(nsfb);
 	return true;
     }
     
-    if (got_event==6) { //key pressed
+    if (got_event==6) { //mouse event
 	unsigned z=kol_mouse_posw();
 	unsigned b=kol_mouse_btn();
 			
-	if (pz!=z) {
-	    event->type = NSFB_EVENT_MOVE_ABSOLUTE;
-	    event->value.vector.x = (z&0xffff0000)>>16; //sdlevent.motion.x;
-	    event->value.vector.y = z&0xffff; //sdlevent.motion.y;
-	    event->value.vector.z = 0;
-	    pz=z;
-	    return true;
-	}		
-		
-	if (pb!=b) {
-	    
-	    unsigned diff = pb^b;
-	    /* All high bits in the XOR mean that the bit has changed */
-	    
-	    if(diff&1)
-		{
-		    if(b&1)
-			{
-			    event->type = NSFB_EVENT_KEY_DOWN;
-			    event->value.keycode = NSFB_KEY_MOUSE_1;
+		if (pz!=z) {
+			event->type = NSFB_EVENT_MOVE_ABSOLUTE;
+			event->value.vector.x = (z&0xffff0000)>>16; //sdlevent.motion.x;
+			event->value.vector.y = z&0xffff; 			//sdlevent.motion.y;
+			event->value.vector.z = 0;
+			pz=z;
+			return true;
+		}		
+			
+		if (pb!=b) {
+			
+			unsigned diff = pb^b;
+			/* All high bits in the XOR mean that the bit has changed */
+			
+			if(diff&(1<<0)) {			// Left mouse button
+				event->value.keycode = NSFB_KEY_MOUSE_1;			
+				if(b&(1<<0)) {
+					event->type = NSFB_EVENT_KEY_DOWN;
+				} else {
+					event->type = NSFB_EVENT_KEY_UP;	   
+				}
+			} else if(diff&(1<<1)) {	// Right mouse button		
+				event->value.keycode = NSFB_KEY_MOUSE_3;
+				if(b&(1<<1)) {
+					event->type = NSFB_EVENT_KEY_DOWN;
+				} else {
+					event->type = NSFB_EVENT_KEY_UP;   
+				}		    		   
+			} else if(diff&(1<<2)) {	// Middle mouse button  
+				event->value.keycode = NSFB_KEY_MOUSE_2;			
+				if(b&(1<<2)) {
+					event->type = NSFB_EVENT_KEY_DOWN;
+				} else {
+					event->type = NSFB_EVENT_KEY_UP;		   
+				}		    		   
+			} else if(diff&(1<<3)) { 	// 4th mouse button (forward)   
+				event->value.keycode = NSFB_KEY_MOUSE_4;			
+				if(b&(1<<3)) {
+					event->type = NSFB_EVENT_KEY_DOWN;
+				} else {
+					event->type = NSFB_EVENT_KEY_UP;		   
+				}		    		   
+			} else if(diff&(1<<4))		// 5th mouse button (back)  
+				event->value.keycode = NSFB_KEY_MOUSE_5;			
+				if(b&(1<<4)) {
+					event->type = NSFB_EVENT_KEY_DOWN;
+				} else {
+					event->type = NSFB_EVENT_KEY_UP;		   
+				}	
 			}
-		    else
-			{
-			    event->type = NSFB_EVENT_KEY_UP;
-			    event->value.keycode = NSFB_KEY_MOUSE_1;			   
-			}
-		}
-	    else if(diff&2) /*Check for Mouse Button 2*/
-		{		    
-		    if(b&2)
-			{
-			    event->type = NSFB_EVENT_KEY_DOWN;
-			    event->value.keycode = NSFB_KEY_MOUSE_2;
-			}
-		    else
-			{
-			    event->type = NSFB_EVENT_KEY_UP;
-			    event->value.keycode = NSFB_KEY_MOUSE_2;			   
-			}		    		   
-		}
-	    else if(diff&4) /*Check for Mouse Button 3*/
-		{		    
-		    if(b&4)
-			{
-			    event->type = NSFB_EVENT_KEY_DOWN;
-			    event->value.keycode = NSFB_KEY_MOUSE_3;
-			}
-		    else
-			{
-			    event->type = NSFB_EVENT_KEY_UP;
-			    event->value.keycode = NSFB_KEY_MOUSE_3;			   
-			}		    		   
-		}	    
-	    else if(diff&8) /*Check for Mouse Button 4*/
-		{		    
-		    if(b&8)
-			{
-			    event->type = NSFB_EVENT_KEY_DOWN;
-			    event->value.keycode = NSFB_KEY_MOUSE_4;
-			}
-		    else
-			{
-			    event->type = NSFB_EVENT_KEY_UP;
-			    event->value.keycode = NSFB_KEY_MOUSE_4;			   
-			}		    		   
-		}
-	    else if(diff&16) /*Check for Mouse Button 5*/
-		{		    
-		    if(b&16)
-			{
-			    event->type = NSFB_EVENT_KEY_DOWN;
-			    event->value.keycode = NSFB_KEY_MOUSE_5;
-			}
-		    else
-			{
-			    event->type = NSFB_EVENT_KEY_UP;
-			    event->value.keycode = NSFB_KEY_MOUSE_5;			   
-			}		    		   
-		}
-	    else if(diff&32) /*Check for Mouse Button 6*/
-		{		    
-		    if(b&32)
-			{
-			    event->type = NSFB_EVENT_KEY_DOWN;
-			    event->value.keycode = NSFB_KEY_MOUSE_6;
-			}
-		    else
-			{
-			    event->type = NSFB_EVENT_KEY_UP;
-			    event->value.keycode = NSFB_KEY_MOUSE_6;			   
-			}		    		   
-		}
-
-	    /* unsigned t=b&1; */
-
-	    /* if (t==0) { */
-	    /* 	event->type = NSFB_EVENT_KEY_UP; */
-	    /* 	event->value.keycode = NSFB_KEY_MOUSE_1; */
-	    /* } else { */
-	    /* 	event->type = NSFB_EVENT_KEY_DOWN; */
-	    /* 	event->value.keycode = NSFB_KEY_MOUSE_1; */
-	    /* } */
-	    pb=b;		
-	    return true;
-	}
-	
+			pb=b;		
+			
+			return true;
+		}	
     }
     
     
