@@ -404,15 +404,97 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 		
 	if (pb!=b) {
 	    
-	    unsigned t=b&1;
+	    unsigned diff = pb^b;
+	    /* All high bits in the XOR mean that the bit has changed */
+	    
+	    if(diff&1)
+		{
+		    if(b&1)
+			{
+			    event->type = NSFB_EVENT_KEY_DOWN;
+			    event->value.keycode = NSFB_KEY_MOUSE_1;
+			}
+		    else
+			{
+			    event->type = NSFB_EVENT_KEY_UP;
+			    event->value.keycode = NSFB_KEY_MOUSE_1;			   
+			}
+		}
+	    else if(diff&2) /*Check for Mouse Button 2*/
+		{		    
+		    if(b&2)
+			{
+			    event->type = NSFB_EVENT_KEY_DOWN;
+			    event->value.keycode = NSFB_KEY_MOUSE_2;
+			}
+		    else
+			{
+			    event->type = NSFB_EVENT_KEY_UP;
+			    event->value.keycode = NSFB_KEY_MOUSE_2;			   
+			}		    		   
+		}
+	    else if(diff&4) /*Check for Mouse Button 3*/
+		{		    
+		    if(b&4)
+			{
+			    event->type = NSFB_EVENT_KEY_DOWN;
+			    event->value.keycode = NSFB_KEY_MOUSE_3;
+			}
+		    else
+			{
+			    event->type = NSFB_EVENT_KEY_UP;
+			    event->value.keycode = NSFB_KEY_MOUSE_3;			   
+			}		    		   
+		}	    
+	    else if(diff&8) /*Check for Mouse Button 4*/
+		{		    
+		    if(b&8)
+			{
+			    event->type = NSFB_EVENT_KEY_DOWN;
+			    event->value.keycode = NSFB_KEY_MOUSE_4;
+			}
+		    else
+			{
+			    event->type = NSFB_EVENT_KEY_UP;
+			    event->value.keycode = NSFB_KEY_MOUSE_4;			   
+			}		    		   
+		}
+	    else if(diff&16) /*Check for Mouse Button 5*/
+		{		    
+		    if(b&16)
+			{
+			    event->type = NSFB_EVENT_KEY_DOWN;
+			    event->value.keycode = NSFB_KEY_MOUSE_5;
+			}
+		    else
+			{
+			    event->type = NSFB_EVENT_KEY_UP;
+			    event->value.keycode = NSFB_KEY_MOUSE_5;			   
+			}		    		   
+		}
+	    else if(diff&32) /*Check for Mouse Button 6*/
+		{		    
+		    if(b&32)
+			{
+			    event->type = NSFB_EVENT_KEY_DOWN;
+			    event->value.keycode = NSFB_KEY_MOUSE_6;
+			}
+		    else
+			{
+			    event->type = NSFB_EVENT_KEY_UP;
+			    event->value.keycode = NSFB_KEY_MOUSE_6;			   
+			}		    		   
+		}
 
-	    if (t==0) {
-		event->type = NSFB_EVENT_KEY_UP;
-		event->value.keycode = NSFB_KEY_MOUSE_1;
-	    } else {
-		event->type = NSFB_EVENT_KEY_DOWN;
-		event->value.keycode = NSFB_KEY_MOUSE_2;
-	    }
+	    /* unsigned t=b&1; */
+
+	    /* if (t==0) { */
+	    /* 	event->type = NSFB_EVENT_KEY_UP; */
+	    /* 	event->value.keycode = NSFB_KEY_MOUSE_1; */
+	    /* } else { */
+	    /* 	event->type = NSFB_EVENT_KEY_DOWN; */
+	    /* 	event->value.keycode = NSFB_KEY_MOUSE_1; */
+	    /* } */
 	    pb=b;		
 	    return true;
 	}
