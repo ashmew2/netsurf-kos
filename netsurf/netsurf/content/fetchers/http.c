@@ -20,6 +20,7 @@ char * (* __stdcall http_find_header_field) (struct http_msg *http_ahoy, char *f
 char * (* __stdcall http_unescape_url) (char * url_asciiz);
 char * (* __stdcall http_post) (char *url, char *headers, char *content_type, char *content_length);
 int (* __stdcall http_send) (struct http_msg *handle, char *data, unsigned int length);
+void (* __stdcall http_disconnect) (struct http_msg *handle);
 
 int HTTP_YAY(){
 	asm volatile ("pusha\n\
@@ -71,7 +72,7 @@ if (http_free == NULL)
     kol_exit();
   }	
 http_receive = ( __stdcall  int (*)(unsigned int))
-		__kolibri__cofflib_getproc  (imp, "process");
+		__kolibri__cofflib_getproc  (imp, "receive");
 
 if (http_receive == NULL)
   {
@@ -115,6 +116,17 @@ if(http_unescape_url == NULL)
      kol_exit();
   }
 
+ 
+ http_disconnect = ( __stdcall  void (*)(struct http_msg *))
+  __kolibri__cofflib_getproc  (imp, "disconnect");
+
+ if(http_disconnect == NULL)
+   {
+     __menuet__debug_out("http_disconnect() is NULL. Exiting.\n");
+     kol_exit();
+  }
+
+ 
 
 __menuet__debug_out("HTTP init...\n");
 HTTP_YAY();

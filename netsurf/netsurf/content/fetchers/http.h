@@ -9,3 +9,4 @@ extern char * (* __stdcall http_find_header_field) (struct http_msg *http_ahoy, 
 extern char * (* __stdcall http_unescape_url) (char * url_asciiz);
 extern char * (* __stdcall http_post) (char *url, char *headers, char *content_type, char *content_length);
 extern int (* __stdcall http_send) (struct http_msg *handle, char *data, unsigned int length);
+extern void (* __stdcall http_disconnect) (struct http_msg *handle);
