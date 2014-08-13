@@ -340,12 +340,12 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 
     nsfb = nsfb; /* unused */
 
-	if (timeout >= 0) {
-		got_event = kol_wait_for_event_with_timeout(timeout/10);
-	} else {
-		got_event = __menuet__wait_for_event();
-	}
-    
+    if (timeout >= 0) {
+	got_event = kol_wait_for_event_with_timeout(timeout/10);
+    } else {
+	got_event = __menuet__wait_for_event();
+    }   
+
     if (got_event == 0) {
         return false;
     }
@@ -400,7 +400,8 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
     if (got_event==6) { //mouse event
 	unsigned z=kol_mouse_posw();
 	unsigned b=kol_mouse_btn();
-			
+	__menuet__debug_out("Got a Mouse Event (Event 6)\n");
+		
 		if (pz!=z) {
 			event->type = NSFB_EVENT_MOVE_ABSOLUTE;
 			event->value.vector.x = (z&0xffff0000)>>16; //sdlevent.motion.x;
@@ -416,6 +417,8 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 			/* All high bits in the XOR mean that the bit has changed */
 			
 			if(diff&(1<<0)) {			// Left mouse button
+			    __menuet__debug_out("KEY_MOUSE_1\n");
+
 				event->value.keycode = NSFB_KEY_MOUSE_1;			
 				if(b&(1<<0)) {
 					event->type = NSFB_EVENT_KEY_DOWN;
@@ -423,6 +426,7 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 					event->type = NSFB_EVENT_KEY_UP;	   
 				}
 			} else if(diff&(1<<1)) {	// Right mouse button		
+			    __menuet__debug_out("KEY_MOUSE_3\n");
 				event->value.keycode = NSFB_KEY_MOUSE_3;
 				if(b&(1<<1)) {
 					event->type = NSFB_EVENT_KEY_DOWN;
@@ -430,6 +434,7 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 					event->type = NSFB_EVENT_KEY_UP;   
 				}		    		   
 			} else if(diff&(1<<2)) {	// Middle mouse button  
+			    __menuet__debug_out("KEY_MOUSE_2\n");
 				event->value.keycode = NSFB_KEY_MOUSE_2;			
 				if(b&(1<<2)) {
 					event->type = NSFB_EVENT_KEY_DOWN;
@@ -437,6 +442,7 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 					event->type = NSFB_EVENT_KEY_UP;		   
 				}		    		   
 			} else if(diff&(1<<3)) { 	// 4th mouse button (forward)   
+			    __menuet__debug_out("KEY_MOUSE_4\n");
 				event->value.keycode = NSFB_KEY_MOUSE_4;			
 				if(b&(1<<3)) {
 					event->type = NSFB_EVENT_KEY_DOWN;
@@ -444,6 +450,7 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 					event->type = NSFB_EVENT_KEY_UP;		   
 				}		    		   
 			} else if(diff&(1<<4))		// 5th mouse button (back)  
+			    __menuet__debug_out("KEY_MOUSE_5\n");
 				event->value.keycode = NSFB_KEY_MOUSE_5;			
 				if(b&(1<<4)) {
 					event->type = NSFB_EVENT_KEY_DOWN;

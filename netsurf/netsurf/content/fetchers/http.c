@@ -33,7 +33,7 @@ int HTTP_YAY(){
 
 int kol_exit(){
   __menuet__debug_out("kol_exit()..Exiting..\n");
-	__menuet__sys_exit();
+  __menuet__sys_exit();
 }
 
 void HTTP_INIT()
