@@ -14,7 +14,7 @@ extern int mem_ReAlloc();
 int (* __stdcall http_init)(void);
 // On the next line, we should tell the C compiler that this procedure actually returns a pointer. (to the http_msg struct)
 unsigned int (* __stdcall http_get) (char * url, char * add_head); //yay, it's NOT uint, but hey, C is stubborn, and I'm dumb
-int (* __stdcall http_process) (unsigned int identifier);
+int (* __stdcall http_receive) (unsigned int identifier);
 void (* __stdcall http_free) (unsigned int identifier);
 char * (* __stdcall http_find_header_field) (struct http_msg *http_ahoy, char *field_name); //This is crazzzzzzyyyyyy
 char * (* __stdcall http_unescape_url) (char * url_asciiz);
@@ -70,12 +70,12 @@ if (http_free == NULL)
     __menuet__debug_out("http_free() is NULL. Exiting.\n");
     kol_exit();
   }	
-http_process = ( __stdcall  int (*)(unsigned int))
+http_receive = ( __stdcall  int (*)(unsigned int))
 		__kolibri__cofflib_getproc  (imp, "process");
 
-if (http_process == NULL)
+if (http_receive == NULL)
   {
-    __menuet__debug_out("http_process() is NULL. Exiting.\n");
+    __menuet__debug_out("http_receive() is NULL. Exiting.\n");
     kol_exit();
   }
 

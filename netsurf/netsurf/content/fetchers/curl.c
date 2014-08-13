@@ -667,16 +667,16 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	  return NULL;
 	}
 	
-	LOG(("http_get on %s", zz));
-
 	/*TODO : Always clear the flags for the handle here*/	
 	
 	if(fetch->post_urlenc)
 	  {
-	    wererat = http_post(zz, fetch->post_urlenc, "text/plain", strlen(fetch->post_urlenc));
+	    LOG(("http_post on %s with headers: %s", zz, fetch->post_urlenc));
+	    wererat = http_post(zz, fetch->post_urlenc, "text/plain", strlen(fetch->post_urlenc));		
 	  }
 	else /* GET Request */
 	  {   	    
+	    LOG(("http_get on URL : %s", zz));
 	    wererat = http_get(zz, NULL); /* Initiates the GET on the handle we want to initiate for */
 	  }
 
@@ -1086,7 +1086,7 @@ void fetch_curl_poll(lwc_string *scheme_ignored)
 	/* process curl results */
 	/*TODO: Needs to be replaced , no idea how to do it right now */
 	/* Go through each http_msg handle from http.obj and check if it's done yet or not , 
-	   using the return value from http_process.   If done, remove it. Else let it stay.
+	   using the return value from http_receive.   If done, remove it. Else let it stay.
 	*/
 	/*TODO: This has been commented to figure out linker errors.
 	  Uncomment this and combine this with the above chunk toget the main process loop
@@ -2077,7 +2077,7 @@ int curl_multi_perform(struct fetch_info_slist *multi_list)
   struct fetch_info_slist *temp = multi_list;
   
   while(temp) {
-    http_process(temp->handle);      
+    http_receive(temp->handle);      
     temp = temp->next;
   }
 }
