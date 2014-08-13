@@ -400,18 +400,18 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
     if (got_event==6) { //mouse event
 	unsigned z=kol_mouse_posw();
 	unsigned b=kol_mouse_btn();
-	__menuet__debug_out("Got a Mouse Event (Event 6)\n");
+	/* __menuet__debug_out("Got a Mouse Event (Event 6)\n"); */
 		
 		if (pz!=z) {
-			event->type = NSFB_EVENT_MOVE_ABSOLUTE;
+		    event->type = NSFB_EVENT_MOVE_ABSOLUTE;
 			event->value.vector.x = (z&0xffff0000)>>16; //sdlevent.motion.x;
 			event->value.vector.y = z&0xffff; 			//sdlevent.motion.y;
 			event->value.vector.z = 0;
 			pz=z;
 			return true;
 		}		
-			
-		if (pb!=b) {
+		
+		else if (pb!=b) {
 			
 			unsigned diff = pb^b;
 			/* All high bits in the XOR mean that the bit has changed */
@@ -449,25 +449,32 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 				} else {
 					event->type = NSFB_EVENT_KEY_UP;		   
 				}		    		   
-			} else if(diff&(1<<4))		// 5th mouse button (back)  
+			} else if(diff&(1<<4)) {		// 5th mouse button (back)  
 			    __menuet__debug_out("KEY_MOUSE_5\n");
-				event->value.keycode = NSFB_KEY_MOUSE_5;			
-				if(b&(1<<4)) {
-					event->type = NSFB_EVENT_KEY_DOWN;
-				} else {
-					event->type = NSFB_EVENT_KEY_UP;		   
-				}	
+			    
+			    event->value.keycode = NSFB_KEY_MOUSE_5;			
+			    if(b&(1<<4)) {
+				event->type = NSFB_EVENT_KEY_DOWN;
+			    } else {
+				event->type = NSFB_EVENT_KEY_UP;		   
+			    }	
+			} else { /*The Event 6 did not match any handled cases*/
+			    char diffstr[40];	    
+			    sprintf(diffstr, "Unhandled case. pb^b is :  %u", diff);
+			    __menuet__debug_out(diffstr);			    
 			}
+
 			pb=b;		
 			
 			return true;
-    }	
-    /*
-      
-      case SDL_MOUSEBUTTONDOWN:
-      event->type = NSFB_EVENT_KEY_DOWN;
-
-      switch (sdlevent.button.button) {
+		}
+    }
+		/*
+		  
+		  case SDL_MOUSEBUTTONDOWN:
+		  event->type = NSFB_EVENT_KEY_DOWN;
+		  
+		  switch (sdlevent.button.button) {
 
       case SDL_BUTTON_LEFT:
       event->value.keycode = NSFB_KEY_MOUSE_1;
