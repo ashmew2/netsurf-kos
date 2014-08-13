@@ -657,9 +657,9 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	   for polling later on multiple transfers together*/
 
 	/* add to the global curl multi handle */
-
+	
 	DBG("inside fetch_curl_initiate_fetch()...\n");
-
+	
 	nsurl_get(fetch->url, NSURL_WITH_FRAGMENT, &zz, &pr);
 	
 	if (zz == NULL) {
@@ -671,11 +671,18 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 
 	/*TODO : Always clear the flags for the handle here*/	
 	
-	wererat = http_get(zz, NULL); /* Initiates the GET on the handle we want to initiate for */
-	
+	if(fetch->post_urlenc)
+	  {
+	    wererat = http_post(zz, fetch->post_urlenc, "text/plain", strlen(fetch->post_urlenc));
+	  }
+	else /* GET Request */
+	  {   	    
+	    wererat = http_get(zz, NULL); /* Initiates the GET on the handle we want to initiate for */
+	  }
+
 	if(wererat == 0)               /* http_get failed. Something wrong. Can't do anything here  */
 	  {
-	    DBG("Error. http_get failed.\n");
+	    DBG("Error. http_get or http_post failed.\n");
 	    fetch_curl_abort(fetch);
 	    return NULL;
 	  }
