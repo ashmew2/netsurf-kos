@@ -18,7 +18,7 @@ int (* __stdcall http_receive) (unsigned int identifier);
 void (* __stdcall http_free) (unsigned int identifier);
 char * (* __stdcall http_find_header_field) (struct http_msg *http_ahoy, char *field_name); //This is crazzzzzzyyyyyy
 char * (* __stdcall http_unescape_url) (char * url_asciiz);
-char * (* __stdcall http_post) (char *url, char *headers, char *content_type, char *content_length);
+char * (* __stdcall http_post) (char *url, char *headers, char *content_type, int content_length);
 int (* __stdcall http_send) (struct http_msg *handle, char *data, unsigned int length);
 void (* __stdcall http_disconnect) (struct http_msg *handle);
 
@@ -97,7 +97,7 @@ if(http_unescape_url == NULL)
     kol_exit();
   }
 
- http_post = ( __stdcall  char *(*)(char *, char *, char *, char *))
+ http_post = ( __stdcall  char *(*)(char *, char *, char *, int))
   __kolibri__cofflib_getproc  (imp, "post");
 
  if(http_post == NULL)

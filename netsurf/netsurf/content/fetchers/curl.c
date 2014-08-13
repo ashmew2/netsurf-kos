@@ -672,21 +672,36 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	if(fetch->post_urlenc)
 	  {
 	    LOG(("http_post on %s with headers: %s", zz, fetch->post_urlenc));
-	    wererat = http_post(zz, fetch->post_urlenc, "text/plain", strlen(fetch->post_urlenc));		
+	    wererat = http_post(zz, NULL, "text/plain", strlen(fetch->post_urlenc));
+
+	    if(wererat == 0)
+	      {
+		LOG(("Error. http_post failed. Aborting fetch.\n"));
+		fetch_curl_abort(fetch);
+		return NULL;
+	      }
+	    else /*Send the post request body*/
+	      {
+		int sent = http_send(wererat, fetch->post_urlenc, strlen(fetch->post_urlenc));
+		LOG(("Sent %d bytes in http_send for %s", sent, fetch->post_urlenc));
+	      }
+	    
 	  }
 	else /* GET Request */
 	  {   	    
 	    LOG(("http_get on URL : %s", zz));
 	    wererat = http_get(zz, NULL); /* Initiates the GET on the handle we want to initiate for */
+	    
+	    if(wererat == 0)               /* http_get failed. Something wrong. Can't do anything here  */
+	      {
+		DBG("Error. http_get failed. Aborting fetch.\n");
+		fetch_curl_abort(fetch);
+		return NULL;
+	      }	    
 	  }
-
-	if(wererat == 0)               /* http_get failed. Something wrong. Can't do anything here  */
-	  {
-	    DBG("Error. http_get or http_post failed.\n");
-	    fetch_curl_abort(fetch);
-	    return NULL;
-	  }
-
+	
+	/* Probably check for the older curl_handle here and http_free() or http_disconnect accordingly TODO */
+	
 	fetch->curl_handle = (struct http_msg *)wererat;  /* Adding the http_msg handle to fetch->handle */
 
 	LOG(("wererat is %u with flags = %u", wererat, fetch->curl_handle->flags));
