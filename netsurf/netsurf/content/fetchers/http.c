@@ -18,7 +18,7 @@ int (* __stdcall http_process) (unsigned int identifier);
 void (* __stdcall http_free) (unsigned int identifier);
 char * (* __stdcall http_find_header_field) (struct http_msg *http_ahoy, char *field_name); //This is crazzzzzzyyyyyy
 char * (* __stdcall http_unescape_url) (char * url_asciiz);
-
+char * (* __stdcall http_post) (char *url, char *headers, char *content_type, char *content_length);
 
 int HTTP_YAY(){
 	asm volatile ("pusha\n\
@@ -93,6 +93,15 @@ if(http_unescape_url == NULL)
   {
     __menuet__debug_out("http_unescape_url() is NULL. Exiting.\n");
     kol_exit();
+  }
+
+ http_post = ( __stdcall  char *(*)(char *, char *, char *, char *))
+  __kolibri__cofflib_getproc  (imp, "post");
+
+ if(http_post == NULL)
+   {
+     __menuet__debug_out("http_post() is NULL. Exiting.\n");
+     kol_exit();
   }
 
 __menuet__debug_out("HTTP init...\n");

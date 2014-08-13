@@ -454,13 +454,9 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 			pb=b;		
 			
 			return true;
-		}	
-    }
-    
-    
-
+    }	
     /*
-
+      
       case SDL_MOUSEBUTTONDOWN:
       event->type = NSFB_EVENT_KEY_DOWN;
 
