@@ -1,3 +1,22 @@
+A list of things that need to be done  :
+
+Short Term:
+Get POST working.
+Determine the cause of 100% CPU usage and fluctuations and fix it.
+Integrate with the Kolibri UI and fix bugs such as the Choose a File Dialog box for uploading content.
+Update to a later Netsurf version
+Handle Cookies in Netsurf
+       
+Medium Term:
+Fix the build scripts and probably have a make.everything file to build everything from scratch in Netsurf (including libs).
+Update to a newer version of netsurf so that things can stay more current.
+Auto-build Netsurf from sources on KolibriOS build server.
+
+Long Term:
+Integrate with the Netsurf CI after UI is merged and we have a triple toolchain.
+Add HTTPS Support (Incomplete Polar SSL C Port needs fixing first.)
+------------------------------------------------------------------------------------------------------------
+
 Libraries need to be made in this order with MENUETLIBC 
 (Reference : NetSurf wiki)
 

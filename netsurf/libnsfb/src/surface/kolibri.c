@@ -58,6 +58,13 @@ unsigned kol_mouse_btn()
     return error;
 }
 
+unsigned kol_mouse_scroll()
+{
+    unsigned error;
+    asm volatile ("int $0x40":"=a"(error):"a"(37), "b"(7));
+    return error;
+}
+
 unsigned kol_wait_for_event_with_timeout(int timeout)	// timeout is in 1/100 seconds
 {
 	unsigned event;
@@ -176,7 +183,7 @@ static int kolibri_set_geometry(nsfb_t *nsfb, int width, int height,
 
     return 0;
 }
-unsigned pz, pb;
+unsigned pz, pb, ps;
 
 static int kolibri_initialise(nsfb_t *nsfb)
 {
@@ -337,7 +344,8 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 {
     int got_event;
     static int scanfull=0;
-
+    char event_num[20];
+    
     nsfb = nsfb; /* unused */
 
     if (timeout >= 0) {
@@ -349,7 +357,10 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
     if (got_event == 0) {
         return false;
     }
-    
+
+    sprintf(event_num, "got_event = %d\n", got_event);
+    __menuet__debug_out(event_num);
+
     event->type = NSFB_EVENT_NONE;
 
     if (got_event==1) { //redraw event
@@ -400,8 +411,12 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
     if (got_event==6) { //mouse event
 	unsigned z=kol_mouse_posw();
 	unsigned b=kol_mouse_btn();
-	/* __menuet__debug_out("Got a Mouse Event (Event 6)\n"); */
-		
+	int s=kol_mouse_scroll();
+	char sstr[20];
+	
+	sprintf(sstr, "s = %d\n", s);
+	__menuet__debug_out(sstr);
+	
 		if (pz!=z) {
 		    event->type = NSFB_EVENT_MOVE_ABSOLUTE;
 			event->value.vector.x = (z&0xffff0000)>>16; //sdlevent.motion.x;
@@ -415,6 +430,8 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 			
 			unsigned diff = pb^b;
 			/* All high bits in the XOR mean that the bit has changed */
+
+			__menuet__debug_out("pb!=b");
 			
 			if(diff&(1<<0)) {			// Left mouse button
 			    __menuet__debug_out("KEY_MOUSE_1\n");
@@ -468,6 +485,15 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 			
 			return true;
 		}
+		else if(s!=0)
+		    {
+			event->type = NSFB_EVENT_KEY_DOWN;
+
+			if(s==1) /*SCROLL DOWN*/
+			    event->value.keycode = NSFB_KEY_MOUSE_5;
+			else /*SCROLL UP*/
+			    event->value.keycode = NSFB_KEY_MOUSE_4;
+		    }
     }
 		/*
 		  
