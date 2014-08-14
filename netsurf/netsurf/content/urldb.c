@@ -2682,14 +2682,7 @@ bool urldb_set_cookie(const char *header, nsurl *url, nsurl *referer)
 	nsurl *urlt;
 	bool match;
 
-	/* assert(url && header); */
-	
-	if(!(url&&header))
-	  {
-	    __menuet__debug_out("Assert failed inside urldb_set_cookie in urldb.c\n");
-	    LOG(("url&&header == NULL. Assert failed."));
-	    return false;
-	  }
+	assert(url && header);
 
 	/* Get defragmented URL, as 'urlt' */
 	if (nsurl_has_component(url, NSURL_FRAGMENT)) {

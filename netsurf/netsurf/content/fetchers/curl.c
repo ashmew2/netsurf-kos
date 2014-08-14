@@ -672,7 +672,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	if(fetch->post_urlenc)
 	  {
 	    LOG(("http_post on %s with headers: %s", zz, fetch->post_urlenc));
-	    wererat = http_post(zz, NULL, "text/plain", strlen(fetch->post_urlenc));
+	    wererat = http_post(zz, NULL, "application/x-www-form-urlencoded", strlen(fetch->post_urlenc));
 
 	    if(wererat == 0)
 	      {
@@ -684,8 +684,7 @@ bool fetch_curl_initiate_fetch(struct curl_fetch_info *fetch, struct http_msg *h
 	      {
 		int sent = http_send(wererat, fetch->post_urlenc, strlen(fetch->post_urlenc));
 		LOG(("Sent %d bytes in http_send for %s", sent, fetch->post_urlenc));
-	      }
-	    
+	      }	    
 	  }
 	else /* GET Request */
 	  {   	    
@@ -1579,8 +1578,8 @@ void fetch_curl_header(void *_f) /* Change type to curl_fetch_infO? TODO*/
 	
 	f->content_length = atol(content_length);
 
-	if(cookie)
-	  fetch_set_cookie(f->fetch_handle, cookie);
+	if(cookie)	  
+	  fetch_set_cookie(f->fetch_handle, cookie+12);
 	return;
 	/* if(f->had_headers) */
 	/*   __menuet__debug_out("curl_fetch_data BEFORE: Had headers is true!\n"); */
