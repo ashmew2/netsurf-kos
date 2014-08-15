@@ -1,6 +1,8 @@
 netsurf-kos
 ===========
 
+Sourcerer initially forked from netsurf git tree rev number 43fe4490d3152ccecd7fd8065c09faaa893fb09e
+
 -----------------------------------------------------
 Build instructions and environment setup.
 -----------------------------------------------------

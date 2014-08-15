@@ -120,24 +120,6 @@ static hubbub_tree_handler tree_handler = {
 	NULL
 };
 
-static void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	void *ret;
-
-	UNUSED(pw);
-
-	/* A half-arsed attempt at filling freshly allocated space with junk. */
-	if (ptr == NULL) {
-		ret = malloc(len);
-		if (ret != NULL)
-			memset(ret, 0xdf, len);
-	} else {
-		ret = realloc(ptr, len);
-	}
-
-	return ret;
-}
-
 
 /*
  * Create, initialise, and return, a parser instance.
@@ -147,8 +129,7 @@ static hubbub_parser *setup_parser(void)
 	hubbub_parser *parser;
 	hubbub_parser_optparams params;
 
-	assert(hubbub_parser_create("UTF-8", false, myrealloc, NULL, &parser) ==
-			HUBBUB_OK);
+	assert(hubbub_parser_create("UTF-8", false, &parser) == HUBBUB_OK);
 
 	params.tree_handler = &tree_handler;
 	assert(hubbub_parser_setopt(parser, HUBBUB_PARSER_TREE_HANDLER,

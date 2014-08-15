@@ -12,27 +12,19 @@
 
 static hubbub_error token_handler(const hubbub_token *token, void *pw);
 
-static void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	UNUSED(pw);
-
-	return realloc(ptr, len);
-}
-
 static int run_test(int argc, char **argv, unsigned int CHUNK_SIZE)
 {
 	hubbub_parser *parser;
 	hubbub_parser_optparams params;
 	FILE *fp;
-	size_t len, origlen;
-	uint8_t *buf = alloca(CHUNK_SIZE);
+	size_t len;
+	uint8_t *buf = malloc(CHUNK_SIZE);
 	const char *charset;
 	hubbub_charset_source cssource;
 
 	UNUSED(argc);
 
-	assert(hubbub_parser_create("UTF-8", false, myrealloc, NULL, &parser) ==
-			HUBBUB_OK);
+	assert(hubbub_parser_create("UTF-8", false, &parser) == HUBBUB_OK);
 
 	params.token_handler.handler = token_handler;
 	params.token_handler.pw = NULL;
@@ -46,7 +38,7 @@ static int run_test(int argc, char **argv, unsigned int CHUNK_SIZE)
 	}
 
 	fseek(fp, 0, SEEK_END);
-	origlen = len = ftell(fp);
+	len = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
 
 	while (len > 0) {
@@ -64,6 +56,8 @@ static int run_test(int argc, char **argv, unsigned int CHUNK_SIZE)
         assert(len == 0);
 
 	fclose(fp);
+
+	free(buf);
 
 	charset = hubbub_parser_read_charset(parser, &cssource);
 

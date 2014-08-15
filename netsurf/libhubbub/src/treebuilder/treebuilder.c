@@ -85,25 +85,22 @@ static bool is_form_associated(element_type type);
  * Create a hubbub treebuilder
  *
  * \param tokeniser    Underlying tokeniser instance
- * \param alloc        Memory (de)allocation function
- * \param pw           Pointer to client-specific private data
  * \param treebuilder  Pointer to location to receive treebuilder instance
  * \return HUBBUB_OK on success,
  *         HUBBUB_BADPARM on bad parameters
  *         HUBBUB_NOMEM on memory exhaustion
  */
 hubbub_error hubbub_treebuilder_create(hubbub_tokeniser *tokeniser,
-		hubbub_allocator_fn alloc, void *pw,
 		hubbub_treebuilder **treebuilder)
 {
 	hubbub_error error;
 	hubbub_treebuilder *tb;
 	hubbub_tokeniser_optparams tokparams;
 
-	if (tokeniser == NULL || alloc == NULL || treebuilder == NULL)
+	if (tokeniser == NULL || treebuilder == NULL)
 		return HUBBUB_BADPARM;
 
-	tb = alloc(NULL, sizeof(hubbub_treebuilder), pw);
+	tb = malloc(sizeof(hubbub_treebuilder));
 	if (tb == NULL)
 		return HUBBUB_NOMEM;
 
@@ -114,11 +111,10 @@ hubbub_error hubbub_treebuilder_create(hubbub_tokeniser *tokeniser,
 	memset(&tb->context, 0, sizeof(hubbub_treebuilder_context));
 	tb->context.mode = INITIAL;
 
-	tb->context.element_stack = alloc(NULL,
-			ELEMENT_STACK_CHUNK * sizeof(element_context),
-			pw);
+	tb->context.element_stack = malloc(
+			ELEMENT_STACK_CHUNK * sizeof(element_context));
 	if (tb->context.element_stack == NULL) {
-		alloc(tb, 0, pw);
+		free(tb);
 		return HUBBUB_NOMEM;
 	}
 	tb->context.stack_alloc = ELEMENT_STACK_CHUNK;
@@ -133,17 +129,14 @@ hubbub_error hubbub_treebuilder_create(hubbub_tokeniser *tokeniser,
 	tb->error_handler = NULL;
 	tb->error_pw = NULL;
 
-	tb->alloc = alloc;
-	tb->alloc_pw = pw;
-
 	tokparams.token_handler.handler = hubbub_treebuilder_token_handler;
 	tokparams.token_handler.pw = tb;
 
 	error = hubbub_tokeniser_setopt(tokeniser,
 			HUBBUB_TOKENISER_TOKEN_HANDLER, &tokparams);
 	if (error != HUBBUB_OK) {
-		alloc(tb->context.element_stack, 0, pw);
-		alloc(tb, 0, pw);
+		free(tb->context.element_stack);
+		free(tb);
 		return error;
 	}
 
@@ -206,8 +199,7 @@ hubbub_error hubbub_treebuilder_destroy(hubbub_treebuilder *treebuilder)
 				treebuilder->context.element_stack[0].node);
 		}
 	}
-	treebuilder->alloc(treebuilder->context.element_stack, 0,
-			treebuilder->alloc_pw);
+	free(treebuilder->context.element_stack);
 	treebuilder->context.element_stack = NULL;
 
 	for (entry = treebuilder->context.formatting_list; entry != NULL;
@@ -220,10 +212,10 @@ hubbub_error hubbub_treebuilder_destroy(hubbub_treebuilder *treebuilder)
 					entry->details.node);
 		}
 
-		treebuilder->alloc(entry, 0, treebuilder->alloc_pw);
+		free(entry);
 	}
 
-	treebuilder->alloc(treebuilder, 0, treebuilder->alloc_pw);
+	free(treebuilder);
 
 	return HUBBUB_OK;
 }
@@ -1086,12 +1078,11 @@ hubbub_error element_stack_push(hubbub_treebuilder *treebuilder,
 	uint32_t slot = treebuilder->context.current_node + 1;
 
 	if (slot >= treebuilder->context.stack_alloc) {
-		element_context *temp = treebuilder->alloc(
+		element_context *temp = realloc(
 				treebuilder->context.element_stack,
 				(treebuilder->context.stack_alloc +
 					ELEMENT_STACK_CHUNK) *
-					sizeof(element_context),
-				treebuilder->alloc_pw);
+					sizeof(element_context));
 
 		if (temp == NULL)
 			return HUBBUB_NOMEM;
@@ -1303,8 +1294,7 @@ hubbub_error formatting_list_append(hubbub_treebuilder *treebuilder,
 {
 	formatting_list_entry *entry;
 
-	entry = treebuilder->alloc(NULL, sizeof(formatting_list_entry),
-			treebuilder->alloc_pw);
+	entry = malloc(sizeof(formatting_list_entry));
 	if (entry == NULL)
 		return HUBBUB_NOMEM;
 
@@ -1353,8 +1343,7 @@ hubbub_error formatting_list_insert(hubbub_treebuilder *treebuilder,
 		assert(next->prev == prev);
 	}
 
-	entry = treebuilder->alloc(NULL, sizeof(formatting_list_entry),
-			treebuilder->alloc_pw);
+	entry = malloc(sizeof(formatting_list_entry));
 	if (entry == NULL)
 		return HUBBUB_NOMEM;
 
@@ -1411,7 +1400,7 @@ hubbub_error formatting_list_remove(hubbub_treebuilder *treebuilder,
 	else
 		entry->next->prev = entry->prev;
 
-	treebuilder->alloc(entry, 0, treebuilder->alloc_pw);
+	free(entry);
 
 	return HUBBUB_OK;
 }

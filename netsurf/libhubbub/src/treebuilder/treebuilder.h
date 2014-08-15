@@ -48,7 +48,6 @@ typedef union hubbub_treebuilder_optparams {
 
 /* Create a hubbub treebuilder */
 hubbub_error hubbub_treebuilder_create(hubbub_tokeniser *tokeniser,
-		hubbub_allocator_fn alloc, void *pw, 
 		hubbub_treebuilder **treebuilder);
 
 /* Destroy a hubbub treebuilder */

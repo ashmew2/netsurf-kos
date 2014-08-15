@@ -127,25 +127,6 @@ static hubbub_tree_handler tree_handler = {
 	NULL
 };
 
-/**
- * Memory allocation callback.
- *
- * \param ptr  Pointer to block to reallocate, or NULL for a new allocation
- * \param len  Required length, in bytes. If zero, then free the block
- * \param pw   Pointer to our private data
- * \return Pointer to resized block
- */
-static void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	/* In this implementation, we just call realloc.
-	 * If we have more complex allocation requirements (e.g. multiple 
-	 * allocation arenas, then we could use pw to point to the arena to use)
-	 */
-	UNUSED(pw);
-
-	return realloc(ptr, len);
-}
-
 /******************************************************************************
  * Main hubbub driver code                                                    *
  ******************************************************************************/
@@ -295,8 +276,7 @@ error_code create_context(const char *charset, context **ctx)
 	c->document = NULL;
 
 	/* Create the parser */
-	error = hubbub_parser_create(c->encoding, true, myrealloc, NULL, 
-			&c->parser);
+	error = hubbub_parser_create(c->encoding, true, &c->parser);
 	if (error != HUBBUB_OK) {
 		free(c);
 		if (error == HUBBUB_BADENCODING)

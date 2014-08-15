@@ -108,7 +108,7 @@ void run_test(const uint8_t *data, size_t len, char *expected)
 	static int testnum;
 
 	assert(hubbub_charset_extract(data, len,
-			&mibenum, &source) == HUBBUB_OK);
+			&mibenum, &source) == PARSERUTILS_OK);
 
 	assert(mibenum != 0);
 

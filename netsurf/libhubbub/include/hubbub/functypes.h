@@ -20,18 +20,6 @@ extern "C"
 #include <hubbub/types.h>
 
 /**
- * Type of allocation function for hubbub 
- *
- * The semantics of this function are the same as for realloc().
- *
- * \param ptr   Pointer to object to reallocate, or NULL for a new allocation
- * \param size  Required length in bytes, or zero to free ::ptr
- * \param pw    Pointer to client data
- * \return Pointer to allocated object, or NULL on failure
- */
-typedef void *(*hubbub_allocator_fn)(void *ptr, size_t size, void *pw);
-
-/**
  * Type of token handling function
  *
  * \param token  Pointer to token to handle

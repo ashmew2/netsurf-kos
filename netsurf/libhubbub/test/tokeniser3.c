@@ -30,13 +30,6 @@ typedef struct context {
 static void run_test(context *ctx);
 static hubbub_error token_handler(const hubbub_token *token, void *pw);
 
-static void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	UNUSED(pw);
-
-	return realloc(ptr, len);
-}
-
 int main(int argc, char **argv)
 {
 	struct json_object *json;
@@ -133,23 +126,24 @@ void run_test(context *ctx)
 		ctx->char_off = 0;
 
 		assert(parserutils_inputstream_create("UTF-8", 0, NULL,
-				myrealloc, NULL, &stream) == PARSERUTILS_OK);
+				&stream) == PARSERUTILS_OK);
 
-		assert(hubbub_tokeniser_create(stream, myrealloc, NULL, &tok) ==
-				HUBBUB_OK);
+		assert(hubbub_tokeniser_create(stream, &tok) == HUBBUB_OK);
 
 		if (ctx->last_start_tag != NULL) {
 			/* Fake up a start tag, in PCDATA state */
 			size_t len = strlen(ctx->last_start_tag) + 3;
-			uint8_t *buf = alloca(len);
+			uint8_t *buf = malloc(len);
 
 			snprintf((char *) buf, len, "<%s>",
 					ctx->last_start_tag);
 
 			assert(parserutils_inputstream_append(stream,
-				buf, len - 1) == HUBBUB_OK);
+				buf, len - 1) == PARSERUTILS_OK);
 
 			assert(hubbub_tokeniser_run(tok) == HUBBUB_OK);
+
+			free(buf);
 		}
 
 		if (ctx->process_cdata) {
@@ -198,13 +192,13 @@ void run_test(context *ctx)
 		for (j = 0; j < ctx->input_len; j++) {
 			assert(parserutils_inputstream_append(stream,
 					ctx->input + j, 1) ==
-							HUBBUB_OK);
+							PARSERUTILS_OK);
 
 			assert(hubbub_tokeniser_run(tok) == HUBBUB_OK);
 		}
 
 		assert(parserutils_inputstream_append(stream, NULL, 0) ==
-				HUBBUB_OK);
+				PARSERUTILS_OK);
 
 		assert(hubbub_tokeniser_run(tok) == HUBBUB_OK);
 
