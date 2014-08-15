@@ -14,36 +14,30 @@
 /**
  * Create a memory buffer
  *
- * \param alloc   Memory (de)allocation function
- * \param pw      Pointer to client-specific private data
  * \param buffer  Pointer to location to receive memory buffer
  * \return PARSERUTILS_OK on success,
  *         PARSERUTILS_BADPARM on bad parameters,
  *         PARSERUTILS_NOMEM on memory exhausion
  */
-parserutils_error parserutils_buffer_create(parserutils_alloc alloc, void *pw,
-		parserutils_buffer **buffer)
+parserutils_error parserutils_buffer_create(parserutils_buffer **buffer)
 {
 	parserutils_buffer *b;
 
-	if (alloc == NULL || buffer == NULL)
+	if (buffer == NULL)
 		return PARSERUTILS_BADPARM;
 
-	b = alloc(NULL, sizeof(parserutils_buffer), pw);
+	b = malloc(sizeof(parserutils_buffer));
 	if (b == NULL)
 		return PARSERUTILS_NOMEM;
 
-	b->data = alloc(NULL, DEFAULT_SIZE, pw);
+	b->data = malloc(DEFAULT_SIZE);
 	if (b->data == NULL) {
-		alloc(b, 0, pw);
+		free(b);
 		return PARSERUTILS_NOMEM;
 	}
 
 	b->length = 0;
 	b->allocated = DEFAULT_SIZE;
-
-	b->alloc = alloc;
-	b->pw = pw;
 
 	*buffer = b;
 
@@ -61,8 +55,8 @@ parserutils_error parserutils_buffer_destroy(parserutils_buffer *buffer)
 	if (buffer == NULL)
 		return PARSERUTILS_BADPARM;
 
-	buffer->alloc(buffer->data, 0, buffer->pw);
-	buffer->alloc(buffer, 0, buffer->pw);
+	free(buffer->data);
+	free(buffer);
 
 	return PARSERUTILS_OK;
 }
@@ -140,7 +134,7 @@ parserutils_error parserutils_buffer_discard(parserutils_buffer *buffer,
 		return PARSERUTILS_BADPARM;
 
 	memmove(buffer->data + offset, buffer->data + offset + len, 
-			buffer->length - len);
+			buffer->length - (len + offset));
 
 	buffer->length -= len;
 
@@ -155,8 +149,7 @@ parserutils_error parserutils_buffer_discard(parserutils_buffer *buffer,
  */
 parserutils_error parserutils_buffer_grow(parserutils_buffer *buffer)
 {
-	uint8_t *temp = buffer->alloc(buffer->data, 
-			buffer->allocated * 2, buffer->pw);
+	uint8_t *temp = realloc(buffer->data, buffer->allocated * 2);
 	if (temp == NULL)
 		return PARSERUTILS_NOMEM;
 
@@ -176,7 +169,7 @@ parserutils_error parserutils_buffer_randomise(parserutils_buffer *buffer)
 		return PARSERUTILS_BADPARM;
 
 #ifndef NDEBUG
-	temp = buffer->alloc(NULL, buffer->allocated, buffer->pw);
+	temp = malloc(buffer->allocated);
 	if (temp == NULL)
 		return PARSERUTILS_NOMEM;
 

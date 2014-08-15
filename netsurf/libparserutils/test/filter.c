@@ -11,13 +11,6 @@
 
 #include "testutils.h"
 
-static void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	UNUSED(pw);
-
-	return realloc(ptr, len);
-}
-
 int main(int argc, char **argv)
 {
 	parserutils_filter_optparams params;
@@ -31,8 +24,7 @@ int main(int argc, char **argv)
 	UNUSED(argv);
 
 	/* Create input filter */
-	assert(parserutils__filter_create("UTF-8", myrealloc, NULL, &input) ==
-			PARSERUTILS_OK);
+	assert(parserutils__filter_create("UTF-8", &input) == PARSERUTILS_OK);
 
 	/* Convert filter to UTF-8 encoding */
 	params.encoding.name = "UTF-8";

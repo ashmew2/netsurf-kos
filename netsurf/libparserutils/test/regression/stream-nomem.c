@@ -8,13 +8,6 @@
 
 #include "testutils.h"
 
-static void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	UNUSED(pw);
-
-	return realloc(ptr, len);
-}
-
 int main(int argc, char **argv)
 {
 	parserutils_inputstream *stream;
@@ -48,7 +41,7 @@ int main(int argc, char **argv)
 	input_buffer[BUFFER_SIZE - 8] = '1';
 
 	assert(parserutils_inputstream_create("UTF-8", 0, 
-			NULL, myrealloc, NULL, &stream) == PARSERUTILS_OK);
+			NULL, &stream) == PARSERUTILS_OK);
 
 	assert(parserutils_inputstream_append(stream, 
 			input_buffer, BUFFER_SIZE) == PARSERUTILS_OK);

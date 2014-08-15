@@ -20,9 +20,6 @@ struct parserutils_stack
 	size_t items_allocated;		/**< Number of slots allocated */
 	int32_t current_item;		/**< Index of current item */
 	void *items;			/**< Items in stack */
-
-	parserutils_alloc alloc;	/**< Memory (de)allocation function */
-	void *pw;			/**< Client-specific data */
 };
 
 /**
@@ -30,28 +27,26 @@ struct parserutils_stack
  *
  * \param item_size   Length, in bytes, of an item in the stack
  * \param chunk_size  Number of stack slots in a chunk
- * \param alloc       Memory (de)allocation function
- * \param pw          Pointer to client-specific private data
  * \param stack       Pointer to location to receive stack instance
  * \return PARSERUTILS_OK on success,
  *         PARSERUTILS_BADPARM on bad parameters
  *         PARSERUTILS_NOMEM on memory exhaustion
  */
 parserutils_error parserutils_stack_create(size_t item_size, size_t chunk_size,
-		parserutils_alloc alloc, void *pw, parserutils_stack **stack)
+		parserutils_stack **stack)
 {
 	parserutils_stack *s;
 
-	if (item_size == 0 || chunk_size == 0 || alloc == NULL || stack == NULL)
+	if (item_size == 0 || chunk_size == 0 || stack == NULL)
 		return PARSERUTILS_BADPARM;
 
-	s = alloc(NULL, sizeof(parserutils_stack), pw);
+	s = malloc(sizeof(parserutils_stack));
 	if (s == NULL)
 		return PARSERUTILS_NOMEM;
 
-	s->items = alloc(NULL, item_size * chunk_size, pw);
+	s->items = malloc(item_size * chunk_size);
 	if (s->items == NULL) {
-		alloc(s, 0, pw);
+		free(s);
 		return PARSERUTILS_NOMEM;
 	}
 
@@ -59,9 +54,6 @@ parserutils_error parserutils_stack_create(size_t item_size, size_t chunk_size,
 	s->chunk_size = chunk_size;
 	s->items_allocated = chunk_size;
 	s->current_item = -1;
-
-	s->alloc = alloc;
-	s->pw = pw;
 
 	*stack = s;
 
@@ -79,8 +71,8 @@ parserutils_error parserutils_stack_destroy(parserutils_stack *stack)
 	if (stack == NULL)
 		return PARSERUTILS_BADPARM;
 
-	stack->alloc(stack->items, 0, stack->pw);
-	stack->alloc(stack, 0, stack->pw);
+	free(stack->items);
+	free(stack);
 
 	return PARSERUTILS_OK;
 }
@@ -107,9 +99,9 @@ parserutils_error parserutils_stack_push(parserutils_stack *stack,
 	slot = stack->current_item + 1;
 
 	if ((size_t) slot >= stack->items_allocated) {
-		void *temp = stack->alloc(stack->items,
+		void *temp = realloc(stack->items,
 				(stack->items_allocated + stack->chunk_size) *
-				stack->item_size, stack->pw);
+				stack->item_size);
 		if (temp == NULL)
 			return PARSERUTILS_NOMEM;
 

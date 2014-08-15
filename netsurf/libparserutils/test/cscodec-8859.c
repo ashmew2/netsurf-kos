@@ -30,13 +30,6 @@ typedef struct line_ctx {
 static bool handle_line(const char *data, size_t datalen, void *pw);
 static void run_test(line_ctx *ctx);
 
-static void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	UNUSED(pw);
-
-	return realloc(ptr, len);
-}
-
 int main(int argc, char **argv)
 {
 	parserutils_charset_codec *codec;
@@ -48,7 +41,7 @@ int main(int argc, char **argv)
 	}
 
 	assert(parserutils_charset_codec_create("NATS-SEFI-ADD",
-			myrealloc, NULL, &codec) == PARSERUTILS_BADENCODING);
+			&codec) == PARSERUTILS_BADENCODING);
 
 	ctx.buflen = parse_filesize(argv[1]);
 	if (ctx.buflen == 0)
@@ -169,15 +162,16 @@ bool handle_line(const char *data, size_t datalen, void *pw)
 			for (end = enc; !isspace(*end); end++)
 				;
 
-			enc_name = alloca(end - enc + 1);
+			enc_name = malloc(end - enc + 1);
 			memcpy(enc_name, enc, end - enc);
 			enc_name[end - enc] = 0;
 
 			assert(parserutils_charset_codec_create(enc_name,
-					myrealloc, NULL, &ctx->codec) ==
-					PARSERUTILS_OK);
+					&ctx->codec) == PARSERUTILS_OK);
 
 			ctx->hadenc = true;
+
+			free(enc_name);
 		}
 	} else {
 		if (ctx->indata) {
@@ -197,7 +191,7 @@ void run_test(line_ctx *ctx)
 {
 	static int testnum;
 	size_t destlen = ctx->bufused * 4;
-	uint8_t *dest = alloca(destlen);
+	uint8_t *dest = malloc(destlen);
 	uint8_t *pdest = dest;
 	const uint8_t *psrc = ctx->buf;
 	size_t srclen = ctx->bufused;
@@ -213,7 +207,7 @@ void run_test(line_ctx *ctx)
 				&pdest, &destlen) == ctx->exp_ret);
 	} else {
 		size_t templen = ctx->bufused * 4;
-		uint8_t *temp = alloca(templen);
+		uint8_t *temp = malloc(templen);
 		uint8_t *ptemp = temp;
 		const uint8_t *ptemp2;
 		size_t templen2;
@@ -237,6 +231,8 @@ void run_test(line_ctx *ctx)
 			assert(templen2 == 0);
 			assert(temp + (ctx->bufused * 4 - templen) == ptemp2);
 		}
+
+		free(temp);
 	}
 	if (ctx->exp_ret == PARSERUTILS_OK) {
 		assert(srclen == 0);
@@ -259,5 +255,7 @@ void run_test(line_ctx *ctx)
 
 	assert(pdest == dest + ctx->expused);
 	assert(memcmp(dest, ctx->exp, ctx->expused) == 0);
+
+	free(dest);
 }
 

@@ -90,7 +90,6 @@ typedef union parserutils_charset_codec_optparams {
 
 /* Create a charset codec */
 parserutils_error parserutils_charset_codec_create(const char *charset,
-		parserutils_alloc alloc, void *pw,
 		parserutils_charset_codec **codec);
 /* Destroy a charset codec */
 parserutils_error parserutils_charset_codec_destroy(

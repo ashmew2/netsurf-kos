@@ -29,8 +29,6 @@ static parserutils_charset_handler *handler_table[] = {
  * Create a charset codec
  *
  * \param charset  Target charset
- * \param alloc    Memory (de)allocation function
- * \param pw       Pointer to client-specific private data (may be NULL)
  * \param codec    Pointer to location to receive codec instance
  * \return PARSERUTILS_OK on success,
  *         PARSERUTILS_BADPARM on bad parameters,
@@ -38,7 +36,6 @@ static parserutils_charset_handler *handler_table[] = {
  *         PARSERUTILS_BADENCODING on unsupported charset
  */
 parserutils_error parserutils_charset_codec_create(const char *charset,
-		parserutils_alloc alloc, void *pw,
 		parserutils_charset_codec **codec)
 {
 	parserutils_charset_codec *c;
@@ -46,7 +43,7 @@ parserutils_error parserutils_charset_codec_create(const char *charset,
 	const parserutils_charset_aliases_canon * canon;
 	parserutils_error error;
 
-	if (charset == NULL || alloc == NULL || codec == NULL)
+	if (charset == NULL || codec == NULL)
 		return PARSERUTILS_BADPARM;
 
 	/* Canonicalise parserutils_charset name. */
@@ -66,7 +63,7 @@ parserutils_error parserutils_charset_codec_create(const char *charset,
 		return PARSERUTILS_BADENCODING;
 
 	/* Instantiate class */
-	error = (*handler)->create(canon->name, alloc, pw, &c);
+	error = (*handler)->create(canon->name, &c);
 	if (error != PARSERUTILS_OK)
 		return error;
 
@@ -74,9 +71,6 @@ parserutils_error parserutils_charset_codec_create(const char *charset,
 	c->mibenum = canon->mib_enum;
 
 	c->errormode = PARSERUTILS_CHARSET_CODEC_ERROR_LOOSE;
-
-	c->alloc = alloc;
-	c->alloc_pw = pw;
 
 	*codec = c;
 
@@ -97,7 +91,7 @@ parserutils_error parserutils_charset_codec_destroy(
 
 	codec->handler.destroy(codec);
 
-	codec->alloc(codec, 0, codec->alloc_pw);
+	free(codec);
 
 	return PARSERUTILS_OK;
 }

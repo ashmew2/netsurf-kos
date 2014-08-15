@@ -19,9 +19,6 @@ extern "C"
 
 #include <parserutils/types.h>
 
-/* Type of allocation function for parserutils */
-typedef void *(*parserutils_alloc)(void *ptr, size_t size, void *pw);
-
 #ifdef __cplusplus
 }
 #endif

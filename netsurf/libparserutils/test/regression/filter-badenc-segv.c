@@ -7,13 +7,6 @@
 
 #include "testutils.h"
 
-static void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	UNUSED(pw);
-
-	return realloc(ptr, len);
-}
-
 int main(int argc, char **argv)
 {
 	parserutils_filter *input;
@@ -29,8 +22,7 @@ int main(int argc, char **argv)
 	UNUSED(argc);
 	UNUSED(argv);
 
-	assert(parserutils__filter_create("UTF-8", myrealloc, NULL, &input) ==
-			PARSERUTILS_OK);
+	assert(parserutils__filter_create("UTF-8", &input) == PARSERUTILS_OK);
 
 	params.encoding.name = "GBK";
 	assert(parserutils__filter_setopt(input, 
