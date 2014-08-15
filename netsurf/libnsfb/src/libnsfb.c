@@ -64,6 +64,7 @@ nsfb_free(nsfb_t *nsfb)
 bool 
 nsfb_event(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 {
+    /* __menuet__debug_out("Inside nsfb_event\n"); */
     return nsfb->surface_rtns->input(nsfb, event, timeout);
 }
 

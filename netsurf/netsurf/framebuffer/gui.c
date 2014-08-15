@@ -625,7 +625,6 @@ void
 gui_poll(bool active)
 {
 	/* LOG(("GUI poll in")); */
-
 	nsfb_event_t event;
 	int timeout; /* timeout in miliseconds */
 
@@ -642,7 +641,6 @@ gui_poll(bool active)
 	if (fbtk_get_redraw_pending(fbtk))
 		timeout = 0;
 
-/* LOG(("fbtk event")); */
 	if (fbtk_event(fbtk, &event, timeout)) {
 		if ((event.type == NSFB_EVENT_CONTROL) &&
 		    (event.value.controlcode ==  NSFB_CONTROL_QUIT))

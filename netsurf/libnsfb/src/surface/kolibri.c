@@ -27,7 +27,7 @@ unsigned char * pixels;
 
 void kol_set_bitfield_for_wanted_events(__u32 ev)
 { 
-	asm volatile ("int $0x40"::"a"(40),"b"(ev));
+    asm volatile ("int $0x40"::"a"(40),"b"(ev));
 }
 
 inline void f65(unsigned x, unsigned y, unsigned w, unsigned h, char *d)
@@ -67,9 +67,9 @@ unsigned kol_mouse_scroll()
 
 unsigned kol_wait_for_event_with_timeout(int timeout)	// timeout is in 1/100 seconds
 {
-	unsigned event;
-	asm volatile ("int $0x40":"=a"(event):"a"(23), "b"(timeout));
-	return event;
+    unsigned event;
+    asm volatile ("int $0x40":"=a"(event):"a"(23), "b"(timeout));
+    return event;
 }
 
 unsigned kol_scancodes()
@@ -183,7 +183,7 @@ static int kolibri_set_geometry(nsfb_t *nsfb, int width, int height,
 
     return 0;
 }
-unsigned pz, pb, ps;
+unsigned pz, pb;
 
 static int kolibri_initialise(nsfb_t *nsfb)
 {
@@ -358,8 +358,8 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
         return false;
     }
 
-    sprintf(event_num, "got_event = %d\n", got_event);
-    __menuet__debug_out(event_num);
+    /* sprintf(event_num, "got_event = %d\n", got_event); */
+    /* __menuet__debug_out(event_num); */
 
     event->type = NSFB_EVENT_NONE;
 
@@ -407,157 +407,162 @@ static bool kolibri_input(nsfb_t *nsfb, nsfb_event_t *event, int timeout)
 	if (__menuet__get_button_id()==1) kolibri_finalise(nsfb);
 	return true;
     }
-    
+
     if (got_event==6) { //mouse event
 	unsigned z=kol_mouse_posw();
 	unsigned b=kol_mouse_btn();
 	int s=kol_mouse_scroll();
-	char sstr[20];
+	/* char sstr[20]; */
 	
-	sprintf(sstr, "s = %d\n", s);
-	__menuet__debug_out(sstr);
+	/* sprintf(sstr, "s = %d\n", s); */
+	/* __menuet__debug_out(sstr); */
 	
-		if (pz!=z) {
-		    event->type = NSFB_EVENT_MOVE_ABSOLUTE;
-			event->value.vector.x = (z&0xffff0000)>>16; //sdlevent.motion.x;
-			event->value.vector.y = z&0xffff; 			//sdlevent.motion.y;
-			event->value.vector.z = 0;
-			pz=z;
-			return true;
-		}		
-		
-		else if (pb!=b) {
-			
-			unsigned diff = pb^b;
-			/* All high bits in the XOR mean that the bit has changed */
+	if (pz!=z) {
+	    event->type = NSFB_EVENT_MOVE_ABSOLUTE;
+	    event->value.vector.x = (z&0xffff0000)>>16; //sdlevent.motion.x;
+	    event->value.vector.y = z&0xffff; 			//sdlevent.motion.y;
+	    event->value.vector.z = 0;
+	    pz=z;
+	}		
+	else if (pb!=b) {	    
+	    unsigned diff = pb^b;
+	    /* All high bits in the XOR mean that the bit has changed */
 
-			__menuet__debug_out("pb!=b");
+	    /* __menuet__debug_out("pb!=b"); */
 			
-			if(diff&(1<<0)) {			// Left mouse button
-			    __menuet__debug_out("KEY_MOUSE_1\n");
+	    if(diff&(1<<0)) {			// Left mouse button
+		/* __menuet__debug_out("KEY_MOUSE_1\n"); */
 
-				event->value.keycode = NSFB_KEY_MOUSE_1;			
-				if(b&(1<<0)) {
-					event->type = NSFB_EVENT_KEY_DOWN;
-				} else {
-					event->type = NSFB_EVENT_KEY_UP;	   
-				}
-			} else if(diff&(1<<1)) {	// Right mouse button		
-			    __menuet__debug_out("KEY_MOUSE_3\n");
-				event->value.keycode = NSFB_KEY_MOUSE_3;
-				if(b&(1<<1)) {
-					event->type = NSFB_EVENT_KEY_DOWN;
-				} else {
-					event->type = NSFB_EVENT_KEY_UP;   
-				}		    		   
-			} else if(diff&(1<<2)) {	// Middle mouse button  
-			    __menuet__debug_out("KEY_MOUSE_2\n");
-				event->value.keycode = NSFB_KEY_MOUSE_2;			
-				if(b&(1<<2)) {
-					event->type = NSFB_EVENT_KEY_DOWN;
-				} else {
-					event->type = NSFB_EVENT_KEY_UP;		   
-				}		    		   
-			} else if(diff&(1<<3)) { 	// 4th mouse button (forward)   
-			    __menuet__debug_out("KEY_MOUSE_4\n");
-				event->value.keycode = NSFB_KEY_MOUSE_4;			
-				if(b&(1<<3)) {
-					event->type = NSFB_EVENT_KEY_DOWN;
-				} else {
-					event->type = NSFB_EVENT_KEY_UP;		   
-				}		    		   
-			} else if(diff&(1<<4)) {		// 5th mouse button (back)  
-			    __menuet__debug_out("KEY_MOUSE_5\n");
-			    
-			    event->value.keycode = NSFB_KEY_MOUSE_5;			
-			    if(b&(1<<4)) {
-				event->type = NSFB_EVENT_KEY_DOWN;
-			    } else {
-				event->type = NSFB_EVENT_KEY_UP;		   
-			    }	
-			} else { /*The Event 6 did not match any handled cases*/
-			    char diffstr[40];	    
-			    sprintf(diffstr, "Unhandled case. pb^b is :  %u", diff);
-			    __menuet__debug_out(diffstr);			    
-			}
-
-			pb=b;		
-			
-			return true;
+		event->value.keycode = NSFB_KEY_MOUSE_1;			
+		if(b&(1<<0)) {
+		    event->type = NSFB_EVENT_KEY_DOWN;
+		} else {
+		    event->type = NSFB_EVENT_KEY_UP;	   
 		}
-		else if(s!=0)
-		    {
-			event->type = NSFB_EVENT_KEY_DOWN;
+	    } else if(diff&(1<<1)) {	// Right mouse button		
+		/* __menuet__debug_out("KEY_MOUSE_3\n"); */
+		event->value.keycode = NSFB_KEY_MOUSE_3;
+		if(b&(1<<1)) {
+		    event->type = NSFB_EVENT_KEY_DOWN;
+		} else {
+		    event->type = NSFB_EVENT_KEY_UP;   
+		}		    		   
+	    } else if(diff&(1<<2)) {	// Middle mouse button  
+		/* __menuet__debug_out("KEY_MOUSE_2\n"); */
+		event->value.keycode = NSFB_KEY_MOUSE_2;			
+		if(b&(1<<2)) {
+		    event->type = NSFB_EVENT_KEY_DOWN;
+		} else {
+		    event->type = NSFB_EVENT_KEY_UP;		   
+		}		    		   
+	    } else if(diff&(1<<3)) { 	// 4th mouse button (forward)   
+		/* __menuet__debug_out("KEY_MOUSE_4\n"); */
+		event->value.keycode = NSFB_KEY_MOUSE_4;			
+		if(b&(1<<3)) {
+		    event->type = NSFB_EVENT_KEY_DOWN;
+		} else {
+		    event->type = NSFB_EVENT_KEY_UP;		   
+		}		    		   
+	    } else if(diff&(1<<4)) {		// 5th mouse button (back)  
+		/* __menuet__debug_out("KEY_MOUSE_5\n"); */
+			    
+		event->value.keycode = NSFB_KEY_MOUSE_5;			
+		if(b&(1<<4)) {
+		    event->type = NSFB_EVENT_KEY_DOWN;
+		} else {
+		    event->type = NSFB_EVENT_KEY_UP;		   
+		}	
+	    } else { /*The Event 6 did not match any handled cases*/
+		char diffstr[40];	    
+		sprintf(diffstr, "Unhandled case. pb^b is :  %u", diff);
+		__menuet__debug_out(diffstr);			    
+	    }
 
-			if(s==1) /*SCROLL DOWN*/
+	    pb=b;					
+	}
+	else if(s!=0)
+	    {
+		short int vert = s&0xffff;
+		short int hori = s>>16;
+
+		event->type = NSFB_EVENT_KEY_DOWN;
+		/*Handle vertical scroll*/
+		if(vert!=0)
+		    {
+			if(vert>0) /*SCROLL DOWN*/
 			    event->value.keycode = NSFB_KEY_MOUSE_5;
 			else /*SCROLL UP*/
 			    event->value.keycode = NSFB_KEY_MOUSE_4;
 		    }
+		else /*Since s is not zero and vert is 0. Horizontal scroll*/ 
+		    {
+			/*Seems like the NS codebase does not have a key dedicated for HSCROLL yet. So use this space when needed*/
+		    }
+	    }
+	return true;
     }
-		/*
-		  
-		  case SDL_MOUSEBUTTONDOWN:
-		  event->type = NSFB_EVENT_KEY_DOWN;
-		  
-		  switch (sdlevent.button.button) {
-
-      case SDL_BUTTON_LEFT:
-      event->value.keycode = NSFB_KEY_MOUSE_1;
-      break;
-
-      case SDL_BUTTON_MIDDLE:
-      event->value.keycode = NSFB_KEY_MOUSE_2;
-      break;
-
-      case SDL_BUTTON_RIGHT:
-      event->value.keycode = NSFB_KEY_MOUSE_3;
-      break;
-
-      }
-      break;
-
-      case SDL_MOUSEBUTTONUP:
-      event->type = NSFB_EVENT_KEY_UP;
-
-      switch (sdlevent.button.button) {
-
-      case SDL_BUTTON_LEFT:
-      event->value.keycode = NSFB_KEY_MOUSE_1;
-      break;
-
-      case SDL_BUTTON_MIDDLE:
-      event->value.keycode = NSFB_KEY_MOUSE_2;
-      break;
-
-      case SDL_BUTTON_RIGHT:
-      event->value.keycode = NSFB_KEY_MOUSE_3;
-      break;
-
-      }
-      break;
-
-      case SDL_MOUSEMOTION:
-      event->type = NSFB_EVENT_MOVE_ABSOLUTE;
-      event->value.vector.x = sdlevent.motion.x;
-      event->value.vector.y = sdlevent.motion.y;
-      event->value.vector.z = 0;
-      break;
-
-      case SDL_QUIT:
-      event->type = NSFB_EVENT_CONTROL;
-      event->value.controlcode = NSFB_CONTROL_QUIT;
-      break;
-
-      case SDL_USEREVENT:
-      event->type = NSFB_EVENT_CONTROL;
-      event->value.controlcode = NSFB_CONTROL_TIMEOUT;
-      break;
-
-      }
-    */
-    return true;
 }
+	/*
+		  
+	  case SDL_MOUSEBUTTONDOWN:
+	  event->type = NSFB_EVENT_KEY_DOWN;
+		  
+	  switch (sdlevent.button.button) {
+
+	  case SDL_BUTTON_LEFT:
+	  event->value.keycode = NSFB_KEY_MOUSE_1;
+	  break;
+
+	  case SDL_BUTTON_MIDDLE:
+	  event->value.keycode = NSFB_KEY_MOUSE_2;
+	  break;
+
+	  case SDL_BUTTON_RIGHT:
+	  event->value.keycode = NSFB_KEY_MOUSE_3;
+	  break;
+
+	  }
+	  break;
+
+	  case SDL_MOUSEBUTTONUP:
+	  event->type = NSFB_EVENT_KEY_UP;
+
+	  switch (sdlevent.button.button) {
+
+	  case SDL_BUTTON_LEFT:
+	  event->value.keycode = NSFB_KEY_MOUSE_1;
+	  break;
+
+	  case SDL_BUTTON_MIDDLE:
+	  event->value.keycode = NSFB_KEY_MOUSE_2;
+	  break;
+
+	  case SDL_BUTTON_RIGHT:
+	  event->value.keycode = NSFB_KEY_MOUSE_3;
+	  break;
+
+	  }
+	  break;
+
+	  case SDL_MOUSEMOTION:
+	  event->type = NSFB_EVENT_MOVE_ABSOLUTE;
+	  event->value.vector.x = sdlevent.motion.x;
+	  event->value.vector.y = sdlevent.motion.y;
+	  event->value.vector.z = 0;
+	  break;
+
+	  case SDL_QUIT:
+	  event->type = NSFB_EVENT_CONTROL;
+	  event->value.controlcode = NSFB_CONTROL_QUIT;
+	  break;
+
+	  case SDL_USEREVENT:
+	  event->type = NSFB_EVENT_CONTROL;
+	  event->value.controlcode = NSFB_CONTROL_TIMEOUT;
+	  break;
+
+	  }
+	*/
 
 
 static int kolibri_claim(nsfb_t *nsfb, nsfb_bbox_t *box)
