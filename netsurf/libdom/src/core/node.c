@@ -50,7 +50,7 @@ static inline dom_exception _dom_node_attach_range(dom_node_internal *first,
 		dom_node_internal *parent, 
 		dom_node_internal *previous, 
 		dom_node_internal *next);
-static inline void _dom_node_detach_range(dom_node_internal *first, 
+static inline dom_exception _dom_node_detach_range(dom_node_internal *first,
 		dom_node_internal *last);
 static inline void _dom_node_replace(dom_node_internal *old, 
 		dom_node_internal *replacement);
@@ -1589,79 +1589,100 @@ dom_exception _dom_node_lookup_namespace(dom_node_internal *node,
  *   + The node entities are equal
  *   + The node notations are equal
  * TODO: in document_type, we should override this virtual function
+ * TODO: actually handle DocumentType nodes differently
  */
 dom_exception _dom_node_is_equal(dom_node_internal *node,
 		dom_node_internal *other, bool *result)
 {
-	dom_exception err;
-	dom_string *s1, *s2;
-	dom_namednodemap *m1, *m2;
-	dom_nodelist *l1, *l2;
+	dom_exception err = DOM_NO_ERR;
+	dom_namednodemap *m1 = NULL, *m2 = NULL;
+	dom_nodelist *l1 = NULL, *l2 = NULL;
+	*result = false;
 
+	/* Compare the node types */
 	if (node->type != other->type){
-		*result = false;
-		return DOM_NO_ERR;
+		/* different */
+		err = DOM_NO_ERR;
+		goto cleanup;
 	}
 
 	assert(node->owner != NULL);
 	assert(other->owner != NULL);
 
-	err = dom_node_get_node_name(node, &s1);
-	if (err != DOM_NO_ERR)
-		return err;
-
-	err = dom_node_get_node_name(other, &s2);
-	if (err != DOM_NO_ERR)
-		return err;
-
-	if (dom_string_isequal(s1, s2) == false) {
-		*result = false;
-		return DOM_NO_ERR;
-	}
-	
-	if (node->name != other->name || 
-			node->namespace != other->namespace ||
-			node->prefix != other->prefix) {
-		*result = false;
-		return DOM_NO_ERR;
+	/* Compare node name */
+	if (dom_string_isequal(node->name, other->name) == false) {
+		/* different */
+		goto cleanup;
 	}
 
+	/* Compare prefix */
+	if (dom_string_isequal(node->prefix, other->prefix) == false) {
+		/* different */
+		goto cleanup;
+	}
+
+	/* Compare namespace URI */
+	if (dom_string_isequal(node->namespace, other->namespace) == false) {
+		/* different */
+		goto cleanup;
+	}
+
+	/* Compare node value */
 	if (dom_string_isequal(node->value, other->value) == false) {
-		*result = false;
-		return DOM_NO_ERR;
+		/* different */
+		goto cleanup;
 	}
 
-	// Following comes the attributes
+	/* Compare the attributes */
 	err = dom_node_get_attributes(node, &m1);
-	if (err != DOM_NO_ERR)
-		return err;
+	if (err != DOM_NO_ERR) {
+		/* error */
+		goto cleanup;
+	}
 	
 	err = dom_node_get_attributes(other, &m2);
-	if (err != DOM_NO_ERR)
-		return err;
-
-	if (dom_namednodemap_equal(m1, m2) != true) {
-		*result = false;
-		return DOM_NO_ERR;
+	if (err != DOM_NO_ERR) {
+		/* error */
+		goto cleanup;
 	}
 
-	// Finally the childNodes
+	if (dom_namednodemap_equal(m1, m2) == false) {
+		/* different */
+		goto cleanup;
+	}
+
+	/* Compare the children */
 	err = dom_node_get_child_nodes(node, &l1);
-	if (err != DOM_NO_ERR)
-		return err;
+	if (err != DOM_NO_ERR) {
+		/* error */
+		goto cleanup;
+	}
 
 	err = dom_node_get_child_nodes(other, &l2);
-	if (err != DOM_NO_ERR)
-		return err;
+	if (err != DOM_NO_ERR) {
+		/* error */
+		goto cleanup;
+	}
 
-	if (dom_nodelist_equal(l1, l2) != true) {
-		*result = false;
-		return DOM_NO_ERR;
+	if (dom_nodelist_equal(l1, l2) == false) {
+		/* different */
+		goto cleanup;
 	}
 
 	*result = true;
 
-	return DOM_NO_ERR;
+cleanup:
+	if (m1 != NULL)
+		dom_namednodemap_unref(m1);
+	if (m2 != NULL)
+		dom_namednodemap_unref(m2);
+
+	if (l1 != NULL)
+		dom_nodelist_unref(l1);
+	if (l2 != NULL)
+		dom_nodelist_unref(l2);
+
+	return err;
 }
 
 /**
@@ -2070,12 +2091,13 @@ dom_exception _dom_node_attach_range(dom_node_internal *first,
  *
  * The range is assumed to be a linked list of sibling nodes.
  */
-void _dom_node_detach_range(dom_node_internal *first, 
+dom_exception _dom_node_detach_range(dom_node_internal *first,
 		dom_node_internal *last)
 {
 	bool success = true;
 	dom_node_internal *parent;
 	dom_node_internal *n;
+	dom_exception err = DOM_NO_ERR;
 
 	if (first->previous != NULL)
 		first->previous->next = last->next;
@@ -2090,8 +2112,8 @@ void _dom_node_detach_range(dom_node_internal *first,
 	parent = first->parent;
 	for (n = first; n != last->next; n = n->next) {
 		/* Dispatch a DOMNodeRemoval event */
-		dom_node_dispatch_node_change_event(n->owner, n, n->parent, 
-				DOM_MUTATION_REMOVAL, &success);
+		err = dom_node_dispatch_node_change_event(n->owner, n,
+				n->parent, DOM_MUTATION_REMOVAL, &success);
 
 		n->parent = NULL;
 	}
@@ -2102,6 +2124,8 @@ void _dom_node_detach_range(dom_node_internal *first,
 
 	first->previous = NULL;
 	last->next = NULL;
+
+	return err;
 }
 
 /**
@@ -2163,8 +2187,8 @@ dom_exception _dom_merge_adjacent_text(dom_node_internal *p,
 	dom_string *str;
 	dom_exception err;
 
-	assert(p->type = DOM_TEXT_NODE);
-	assert(n->type = DOM_TEXT_NODE);
+	assert(p->type == DOM_TEXT_NODE);
+	assert(n->type == DOM_TEXT_NODE);
 
 	err = dom_text_get_whole_text(n, &str);
 	if (err != DOM_NO_ERR)

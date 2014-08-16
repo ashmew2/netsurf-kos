@@ -8,23 +8,12 @@
 
 #include <assert.h>
 #include <stdlib.h>
-
-typedef signed char int8_t;
-typedef signed short int16_t;
-typedef signed int int32_t;
-
-typedef unsigned char uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int uint32_t;
-
+#include <stdint.h>
 #include <dom/functypes.h>
 #include <dom/core/attr.h>
 #include <dom/core/element.h>
 #include <dom/core/document.h>
 #include <dom/core/implementation.h>
-
-
-
 
 #include "core/string.h"
 #include "core/attr.h"
@@ -158,6 +147,14 @@ dom_exception _dom_document_initialise(dom_document *doc,
 		return err;
 	}
 
+	err = dom_string_create_interned((const uint8_t *) "script",
+			SLEN("script"), &doc->script_string);
+	if (err != DOM_NO_ERR) {
+		dom_string_unref(doc->id_name);
+		dom_string_unref(doc->class_string);
+		return err;
+	}
+
 	/* Intern the empty string. The use of a space in the constant
 	 * is to prevent the compiler warning about an empty string.
 	 */
@@ -166,6 +163,7 @@ dom_exception _dom_document_initialise(dom_document *doc,
 	if (err != DOM_NO_ERR) {
 		dom_string_unref(doc->id_name);
 		dom_string_unref(doc->class_string);
+		dom_string_unref(doc->script_string);
 		return err;
 	}
 
@@ -176,6 +174,7 @@ dom_exception _dom_document_initialise(dom_document *doc,
 		dom_string_unref(doc->_memo_empty);
 		dom_string_unref(doc->id_name);
 		dom_string_unref(doc->class_string);
+		dom_string_unref(doc->script_string);
 		return err;
 	}
 
@@ -187,6 +186,7 @@ dom_exception _dom_document_initialise(dom_document *doc,
 		dom_string_unref(doc->_memo_empty);
 		dom_string_unref(doc->id_name);
 		dom_string_unref(doc->class_string);
+		dom_string_unref(doc->script_string);
 		return err;
 	}
 
@@ -199,6 +199,7 @@ dom_exception _dom_document_initialise(dom_document *doc,
 		dom_string_unref(doc->_memo_empty);
 		dom_string_unref(doc->id_name);
 		dom_string_unref(doc->class_string);
+		dom_string_unref(doc->script_string);
 		return err;
 	}
 
@@ -212,6 +213,7 @@ dom_exception _dom_document_initialise(dom_document *doc,
 		dom_string_unref(doc->_memo_empty);
 		dom_string_unref(doc->id_name);
 		dom_string_unref(doc->class_string);
+		dom_string_unref(doc->script_string);
 		return err;
 	}
 
@@ -226,6 +228,7 @@ dom_exception _dom_document_initialise(dom_document *doc,
 		dom_string_unref(doc->_memo_empty);
 		dom_string_unref(doc->id_name);
 		dom_string_unref(doc->class_string);
+		dom_string_unref(doc->script_string);
 		return err;
 	}
 
@@ -241,6 +244,7 @@ dom_exception _dom_document_initialise(dom_document *doc,
 		dom_string_unref(doc->_memo_empty);
 		dom_string_unref(doc->id_name);
 		dom_string_unref(doc->class_string);
+		dom_string_unref(doc->script_string);
 		return err;
 	}
 
@@ -257,6 +261,7 @@ dom_exception _dom_document_initialise(dom_document *doc,
 		dom_string_unref(doc->_memo_empty);
 		dom_string_unref(doc->id_name);
 		dom_string_unref(doc->class_string);
+		dom_string_unref(doc->script_string);
 		return err;
 	}
 
@@ -294,6 +299,7 @@ bool _dom_document_finalise(dom_document *doc)
 		dom_string_unref(doc->id_name);
 
 	dom_string_unref(doc->class_string);
+	dom_string_unref(doc->script_string);
 	dom_string_unref(doc->_memo_empty);
 	dom_string_unref(doc->_memo_domnodeinserted);
 	dom_string_unref(doc->_memo_domnoderemoved);
@@ -830,6 +836,9 @@ dom_exception _dom_document_get_element_by_id(dom_document *doc,
 
 	err = _dom_find_element_by_id(root, id, result);
 	dom_node_unref(root);
+
+	if (*result != NULL)
+		dom_node_ref(*result);
 
 	return err;
 }

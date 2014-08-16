@@ -67,12 +67,14 @@ dom_exception dom_implementation_create_document_type(
 	dom_string *public_id_s = NULL, *system_id_s = NULL;
 	dom_exception err;
 
-	if (qname != NULL) {
-		err = dom_string_create((const uint8_t *) qname,
-				strlen(qname), &qname_s);
-		if (err != DOM_NO_ERR)
-			return err;
+	if (qname == NULL) {
+		return DOM_INVALID_CHARACTER_ERR;
 	}
+
+	err = dom_string_create((const uint8_t *) qname,
+				strlen(qname), &qname_s);
+	if (err != DOM_NO_ERR)
+		return err;
 
 	err = _dom_namespace_split_qname(qname_s, &prefix, &lname);
 	if (err != DOM_NO_ERR) {
@@ -253,7 +255,7 @@ dom_exception dom_implementation_create_document(
 			return err;
 		}
 
-		/* No int32_ter interested in inserted node */
+		/* No longer interested in inserted node */
 		dom_node_unref(inserted);
 
 		/* Done with element */

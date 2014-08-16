@@ -10,20 +10,16 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "hubbub/errors.h"
-#include "hubbub/hubbub.h"
-#include "hubbub/parser.h"
+#include <hubbub/errors.h>
+#include <hubbub/hubbub.h>
+#include <hubbub/parser.h>
 
 #include <dom/dom.h>
 
-
-//#include "errors.h"
 #include "parser.h"
 #include "utils.h"
 
 #include "core/document.h"
-
-
 #include "core/string.h"
 #include "core/node.h"
 
@@ -475,7 +471,6 @@ static hubbub_error has_children(void *parser, void *node, bool *result)
 
 static hubbub_error form_associate(void *parser, void *form, void *node)
 {
-	
 	dom_hubbub_parser *dom_parser = (dom_hubbub_parser *) parser;
 	dom_html_form_element *form_ele = form;
 	dom_node_internal *ele = node;
@@ -683,24 +678,6 @@ static hubbub_tree_handler tree_handler = {
 };
 
 /**
- * Memory allocator
- */
-static void *dom_hubbub_alloc(void *ptr, size_t len, void *pw)
-{
-	UNUSED(pw);
-
-	if (ptr == NULL)
-		return len > 0 ? malloc(len) : NULL;
-
-	if (len == 0) {
-		free(ptr);
-		return NULL;
-	}
-
-	return realloc(ptr, len);
-}
-
-/**
  * Default message callback
  */
 static void dom_hubbub_parser_default_msg(uint32_t severity, void *ctx,
@@ -785,8 +762,6 @@ dom_hubbub_parser_create(dom_hubbub_parser_params *params,
 	/* create hubbub parser */
 	error = hubbub_parser_create(binding->encoding,
 				     params->fix_enc,
-				     dom_hubbub_alloc,
-				     NULL,
 				     &binding->parser);
 	if (error != HUBBUB_OK)	 {
 		free(binding);

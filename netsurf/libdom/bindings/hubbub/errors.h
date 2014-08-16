@@ -8,8 +8,6 @@
 #ifndef dom_hubbub_errors_h_
 #define dom_hubbub_errors_h_
 
-#include <hubbub/errors.h> 
-
 typedef enum {
 	DOM_HUBBUB_OK           = 0,
 
