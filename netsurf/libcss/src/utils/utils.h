@@ -62,8 +62,7 @@ static inline uint32_t charToHex(uint8_t c)
 	return c;
 }
 
-static inline css_error
-css_error_from_lwc_error(lwc_error err)
+static inline css_error css_error_from_lwc_error(lwc_error err)
 {
         switch (err) {
         case lwc_error_ok:

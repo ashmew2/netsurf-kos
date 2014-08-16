@@ -59,7 +59,7 @@ typedef struct css_computed_uncommon {
  *  2 ooooooob	outline-width  | border-spacing
  *  3 bbbbbbbb	border-spacing
  *  4 wwwwwwir	word-spacing   | counter-increment | counter-reset
- *  5 uuuuu...	cursor         | <unused>
+ *  5 uuuuumm.	cursor         | writing-mode      | <unused>
  *  6 cccccccc	clip
  *  7 cccccccc	clip
  *  8 ccccccoo	clip           | content
@@ -95,8 +95,8 @@ typedef struct css_computed_page {
  */
 	uint8_t bits[2];
 	
-	css_fixed widows;
-	css_fixed orphans;
+	int32_t widows;
+	int32_t orphans;
 } css_computed_page;
     
 struct css_computed_style {
@@ -218,7 +218,7 @@ struct css_computed_style {
  * 19 wwwwwwff	width               | font-style
  * 20 mmmmmbbb	min-height          | background-repeat
  * 21 mmmmmccc	min-width           | clear
- * 22 tttttooo	padding-top         | overflow
+ * 22 tttttxxx	padding-top         | overflow-x
  * 23 rrrrrppp	padding-right       | position
  * 24 bbbbbo..	padding-bottom      | opacity               | <unused>
  * 25 lllllttt	padding-left        | text-transform
@@ -231,10 +231,11 @@ struct css_computed_style {
  * 32 ffffllll	font-weight         | list-style-type
  * 33 oooottuu	outline-style       | table-layout          | unicode-bidi
  * 34 vvlltttt	visibility          | list-style-position   | text-align
+ * 35 yyy.....	overflow-y          | <unused>
  */
-	uint8_t bits[34];
+	uint8_t bits[35];
 
-	uint8_t unused[2];
+	uint8_t unused[1];
 
 	css_color background_color;
 	lwc_string *background_image;
@@ -285,9 +286,6 @@ struct css_computed_style {
 	css_computed_uncommon *uncommon;/**< Uncommon properties */
 	void *aural;			/**< Aural properties */
 	css_computed_page *page;	/**< Page properties */
-
-	css_allocator_fn alloc;
-	void *pw;
 };
 
 css_error css__compute_absolute_values(const css_computed_style *parent,

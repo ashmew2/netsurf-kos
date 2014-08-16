@@ -19,7 +19,6 @@
 
 
 /* Function declarations. */
-static void *myrealloc(void *ptr, size_t len, void *pw);
 static css_error resolve_url(void *pw,
 		const char *base, lwc_string *rel, lwc_string **abs);
 static void die(const char *text, css_error code);
@@ -101,6 +100,10 @@ static css_error ua_default_for_property(void *pw, uint32_t property,
 		css_hint *hint);
 static css_error compute_font_size(void *pw, const css_hint *parent,
 		css_hint *size);
+static css_error set_libcss_node_data(void *pw, void *n,
+		void *libcss_node_data);
+static css_error get_libcss_node_data(void *pw, void *n,
+		void **libcss_node_data);
 
 /* Table of function pointers for the LibCSS Select API. */
 static css_select_handler select_handler = {
@@ -140,7 +143,9 @@ static css_select_handler select_handler = {
 	node_is_lang,
 	node_presentational_hint,
 	ua_default_for_property,
-	compute_font_size
+	compute_font_size,
+	set_libcss_node_data,
+	get_libcss_node_data
 };
 
 
@@ -149,235 +154,9 @@ int main(int argc, char **argv)
 	css_error code;
 	css_stylesheet *sheet;
 	size_t size;
-	const char data[] = "body {\
-	color: #333333;\
-	background: #F4F5F5;\
-	line-height: 2em;\
-	font-size: 11.5pt;\
-	margin: 0;\
-	padding: 0;\
-	font-family: \"Source Sans Pro\", \"Open Sans\", sans-serif;\
-}\
-\
-a {\
-	text-decoration: underline;\
-	color: #1F1F1F;\
-}\
-\
-a:hover {\
-	text-decoration: none;\
-}\
-\
-a img {\
-	filter: alpha(opacity=80);\
-	..-opacity:0.8;\
-	opacity: 0.8;\
-	-khtml-opacity: 0.8;\
-}\
-\
-a img:hover {\
-	filter: alpha(opacity=100);\
-	..-opacity:1.0;\
-	opacity: 1.0;\
-	-khtml-opacity: 1.0;\
-}\
-\
-#logo {\
-	opacity: 1;\
-	filter: alpha(opacity=100);\
-	border-radius: 2px;\
-	border: solid 5px white;\
-	box-shadow: 0px 0px 0px 1px #D4D5D5, 0px 0px 10px 0px rgba(0,0,0,0.1);\
-}\
-\
-#show {\
-	width:800px;\
-	height:600px;\
-	cursor:pointer;\
-	box-shadow: 0px 0px 0px 1px #D4D5D5, 0px 0px 10px 0px rgba(0,0,0,0.1);\
-}\
-\
-.minislide, .minislide_a {\
-	width: 80px;\
-	height: 60px;\
-	padding: 1px;\
-}\
-\
-.minislide { border: 1px solid #ccc; }\
-.minislide_a {\
-	border: 1px solid #222;\
-	opacity: 1;\
-	filter: alpha(opacity=100);\
-}\
-\
-.download_img {\
-	width: 32px;\
-	height: 32px;\
-	border: 0px;\
-}\
-\
-.icon_cell {\
-	width: 32px;\
-	height:32px;\
-	background-repeat: no-repeat;\
-}\
-\
-#footer {\
-	padding: 30px 0 30px 0;\
-	text-align: center;\
-	color: #848585;\
-	-khtml-text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);\
-	-webkit-text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);\
-	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);\
-}\
-\
-#footer a {\
-	color: #848585;\
-}\
-\
-#page {\
-	position: relative;\
-	margin: 0;\
-	background-attachment: scroll;\
-	background-repeat: no-repeat;\
-	background-position: right bottom;\
-	color: #333333;\
-	padding: 5px 35px 5px 35px;\
-	width: 910px;\
-}\
-\
-\
-#inner {\
-	background: #fff;\
-	border-radius: 4px;\
-	box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.1);\
-	border: solid 1px #D4D5D5;\
-}\
-\
-*+html #inner { /*IE 7*/\
-	background: #fff;\
-	filter:\
-	progid:DXImageTransform.Microsoft.Shadow(color='#e5e6e6', Direction=45, Strength=3)\
-	progid:DXImageTransform.Microsoft.Shadow(color='#e5e6e6', Direction=135, Strength=3)\
-	progid:DXImageTransform.Microsoft.Shadow(color='#e5e6e6', Direction=225, Strength=3)\
-	progid:DXImageTransform.Microsoft.Shadow(color='#e5e6e6', Direction=315, Strength=3);\
-	position: relative;\
-	top: -6px;\
-	left: -6px;\
-	zoom: 1;\
-}\
-\
-*+html #logo { /*IE 7*/\
-	border: 1px solid #D4D5D5;\
-}\
-\
-@media \0screen { /*IE 8*/\
-	#inner {\
-		background: #fff;\
-		filter:\
-		progid:DXImageTransform.Microsoft.Shadow(color='#e5e6e6', Direction=45, Strength=3)\
-		progid:DXImageTransform.Microsoft.Shadow(color='#e5e6e6', Direction=135, Strength=3)\
-		progid:DXImageTransform.Microsoft.Shadow(color='#e5e6e6', Direction=225, Strength=3)\
-		progid:DXImageTransform.Microsoft.Shadow(color='#e5e6e6', Direction=315, Strength=3);\
-		position: relative;\
-		top: -6px;\
-		left: -6px;\
-		zoom: 1;\
-	}\
-	#logo {\
-		position: relative;\
-		top: 9px;\
-		left: 9px;\
-		border: 1px solid #D4D5D5;\
-	}\
-}\
-\
-#splash {\
-	margin: 0;\
-	position: relative;\
-	padding: 35px 35px 5px 35px;\
-}\
-\
-#wrapper {\
-	width: 980px;\
-	position: relative;\
-	margin-right: auto;\
-	margin-bottom: 0;\
-	margin-left: auto;\
-}\
-\
-#floatbar {\
-	position: fixed; \
-	top:0;\
-	right:0;\
-	bottom:100px;\
-	left:0;\
-	float: center !important; \
-	text-align:center;\
-	z-index:9998;\
-	height: 30px !important;\
-}\
-\
-#idsel {\
-	dispaly: inline;\
-	color: white !important; \
-	font-weight: bold !important;\
-	text-decoration: none !important; \
-}\
-\
-#archnavbar {\
-	height: 30px !important;\
-	padding: 10px 15px !important;\
-	background: #333 !important;\
-	border-bottom: 1px #888 solid !important;\
-	box-shadow: 0 0 5px black;\
-	box-shadow: 0 0 10px rgba(0,0,0,0.4);\
-	-moz-box-shadow: 0 0 10px rgba(0,0,0,0.4);\
-	-webkit-box-shadow: 0 0 10px rgba(0,0,0,0.4);\
-	position: relative;\
-}\
-\
-#archnavbarlist { \
-	width: 980px;\
-	height: 30px !important;\
-	position: relative;\
-	margin-top: 0px;\
-	margin-right: auto;\
-	margin-bottom: 0px;\
-	margin-left: auto;\
-	float: center !important; \
-	list-style: none !important; \
-	padding: 0 !important;\
-}\
-\
-#archnavbarlist ul { \
-	text-align:center;	\
-}\
-\
-#archnavbarlist li { \
-	display: inline-block;\
-	float: center !important; \
-	font-size: 14px !important; \
-	line-height: 25px !important; \
-	padding-right: 15px !important; \
-	padding-left: 15px !important;\
-}\
-\
-#archnavbarlist li a { \
-	color: #999; \
-	font-weight: bold !important;\
-	text-decoration: none !important;\
-}\
-\
-#archnavbarlist li a:hover { \
-	color: white !important; \
-	font-weight: bold !important;\
-	text-decoration: none !important; \
-}\
-\
-strong {\
-	color: #000;\
-}";
+	const char data[] = "h1 { color: red } "
+		"h4 { color: #321; } "
+		"h4, h5 { color: #123456; }";
 	css_select_ctx *select_ctx;
 	uint32_t count;
 	unsigned int hh;
@@ -403,7 +182,7 @@ strong {\
 	params.font_pw = NULL;
 
 	/* create a stylesheet */
-	code = css_stylesheet_create(&params, myrealloc, NULL, &sheet);
+	code = css_stylesheet_create(&params, &sheet);
 	if (code != CSS_OK)
 		die("css_stylesheet_create", code);
 	code = css_stylesheet_size(sheet, &size);
@@ -427,7 +206,7 @@ strong {\
 
 
 	/* prepare a selection context containing the stylesheet */
-	code = css_select_ctx_create(myrealloc, 0, &select_ctx);
+	code = css_select_ctx_create(&select_ctx);
 	if (code != CSS_OK)
 		die("css_select_ctx_create", code);
 	code = css_select_ctx_append_sheet(select_ctx, sheet, CSS_ORIGIN_AUTHOR,
@@ -441,8 +220,7 @@ strong {\
 
 
 	/* select style for each of h1 to h6 */
-	//for (hh = 1; hh != 7; hh++) {
-		hh=1;
+	for (hh = 1; hh != 7; hh++) {
 		css_select_results *style;
 		char element[20];
 		lwc_string *element_name;
@@ -452,9 +230,7 @@ strong {\
 		/* in this very simple example our "document tree" is just one
 		 * node and is in fact a libwapcaplet string containing the
 		 * element name */
-		//snprintf(element, sizeof element, "%i", hh);
-		snprintf(element, sizeof element, "a");
-		
+		snprintf(element, sizeof element, "h%i", hh);
 		lwc_intern_string(element, strlen(element), &element_name);
 
 		code = css_select_style(select_ctx, element_name,
@@ -472,12 +248,12 @@ strong {\
 		if (color_type == CSS_COLOR_INHERIT)
 			printf("color of h%i is 'inherit'\n", hh);
 		else
-			printf("color of A is %x\n",  color_shade);
+			printf("color of h%i is %x\n", hh, color_shade);
 
 		code = css_select_results_destroy(style);
 		if (code != CSS_OK)
 			die("css_computed_style_destroy", code);
-	//}
+	}
 
 
 	/* free everything and shut down libcss */
@@ -489,15 +265,6 @@ strong {\
 		die("css_stylesheet_destroy", code);
 
 	return 0;
-}
-
-
-void *myrealloc(void *ptr, size_t len, void *pw)
-{
-	UNUSED(pw);
-	/*printf("myrealloc(%p, %zu)\n", ptr, len);*/
-
-	return realloc(ptr, len);
 }
 
 
@@ -950,6 +717,29 @@ css_error compute_font_size(void *pw, const css_hint *parent, css_hint *size)
 	}
 
 	size->status = CSS_FONT_SIZE_DIMENSION;
+
+	return CSS_OK;
+}
+
+static css_error set_libcss_node_data(void *pw, void *n,
+		void *libcss_node_data)
+{
+	UNUSED(pw);
+	UNUSED(n);
+
+	/* Since we're not storing it, ensure node data gets deleted */
+	css_libcss_node_data_handler(&select_handler, CSS_NODE_DELETED,
+			pw, n, NULL, libcss_node_data);
+
+	return CSS_OK;
+}
+
+static css_error get_libcss_node_data(void *pw, void *n,
+		void **libcss_node_data)
+{
+	UNUSED(pw);
+	UNUSED(n);
+	*libcss_node_data = NULL;
 
 	return CSS_OK;
 }

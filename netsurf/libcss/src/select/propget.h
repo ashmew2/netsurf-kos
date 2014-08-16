@@ -174,6 +174,27 @@ static inline uint8_t get_word_spacing(
 #undef WORD_SPACING_SHIFT
 #undef WORD_SPACING_INDEX
 
+#define WRITING_MODE_INDEX 4
+#define WRITING_MODE_MASK  0x6
+#define WRITING_MODE_SHIFT 1
+static inline uint8_t get_writing_mode(
+		const css_computed_style *style)
+{
+	if (style->uncommon != NULL) {
+		uint8_t bits = style->uncommon->bits[WRITING_MODE_INDEX];
+		bits &= WRITING_MODE_MASK;
+		bits >>= WRITING_MODE_SHIFT;
+
+		/* 2bits: type */
+		return bits;
+	}
+
+	return CSS_WRITING_MODE_HORIZONTAL_TB;
+}
+#undef WRITING_MODE_INDEX
+#undef WRITING_MODE_MASK
+#undef WRITING_MODE_SHIFT
+
 #define COUNTER_INCREMENT_INDEX 3
 #define COUNTER_INCREMENT_SHIFT 1
 #define COUNTER_INCREMENT_MASK  0x2
@@ -582,6 +603,16 @@ static inline uint8_t get_top(
 
 	return (bits & 0x3);
 }
+static inline uint8_t get_top_bits(
+		const css_computed_style *style)
+{
+	uint8_t bits = style->bits[TOP_INDEX];
+	bits &= TOP_MASK;
+	bits >>= TOP_SHIFT;
+
+	/* 6bits: uuuutt : units | type */
+	return bits;
+}
 #undef TOP_MASK
 #undef TOP_SHIFT
 #undef TOP_INDEX
@@ -604,6 +635,16 @@ static inline uint8_t get_right(
 	}
 
 	return (bits & 0x3);
+}
+static inline uint8_t get_right_bits(
+		const css_computed_style *style)
+{
+	uint8_t bits = style->bits[RIGHT_INDEX];
+	bits &= RIGHT_MASK;
+	bits >>= RIGHT_SHIFT;
+
+	/* 6bits: uuuutt : units | type */
+	return bits;
 }
 #undef RIGHT_MASK
 #undef RIGHT_SHIFT
@@ -628,6 +669,16 @@ static inline uint8_t get_bottom(
 
 	return (bits & 0x3);
 }
+static inline uint8_t get_bottom_bits(
+		const css_computed_style *style)
+{
+	uint8_t bits = style->bits[BOTTOM_INDEX];
+	bits &= BOTTOM_MASK;
+	bits >>= BOTTOM_SHIFT;
+
+	/* 6bits: uuuutt : units | type */
+	return bits;
+}
 #undef BOTTOM_MASK
 #undef BOTTOM_SHIFT
 #undef BOTTOM_INDEX
@@ -650,6 +701,16 @@ static inline uint8_t get_left(
 	}
 
 	return (bits & 0x3);
+}
+static inline uint8_t get_left_bits(
+		const css_computed_style *style)
+{
+	uint8_t bits = style->bits[LEFT_INDEX];
+	bits &= LEFT_MASK;
+	bits >>= LEFT_SHIFT;
+
+	/* 6bits: uuuutt : units | type */
+	return bits;
 }
 #undef LEFT_MASK
 #undef LEFT_SHIFT
@@ -1277,22 +1338,39 @@ static inline uint8_t get_padding_left(
 #undef PADDING_LEFT_SHIFT
 #undef PADDING_LEFT_INDEX
 
-#define OVERFLOW_INDEX 21
-#define OVERFLOW_SHIFT 0
-#define OVERFLOW_MASK  0x7
-static inline uint8_t get_overflow(
+#define OVERFLOW_X_INDEX 21
+#define OVERFLOW_X_SHIFT 0
+#define OVERFLOW_X_MASK  0x7
+static inline uint8_t get_overflow_x(
 		const css_computed_style *style)
 {
-	uint8_t bits = style->bits[OVERFLOW_INDEX];
-	bits &= OVERFLOW_MASK;
-	bits >>= OVERFLOW_SHIFT;
+	uint8_t bits = style->bits[OVERFLOW_X_INDEX];
+	bits &= OVERFLOW_X_MASK;
+	bits >>= OVERFLOW_X_SHIFT;
 
 	/* 3bits: type */
 	return bits;
 }
-#undef OVERFLOW_MASK
-#undef OVERFLOW_SHIFT
-#undef OVERFLOW_INDEX
+#undef OVERFLOW_X_MASK
+#undef OVERFLOW_X_SHIFT
+#undef OVERFLOW_X_INDEX
+
+#define OVERFLOW_Y_INDEX 34
+#define OVERFLOW_Y_SHIFT 5
+#define OVERFLOW_Y_MASK  0xe0
+static inline uint8_t get_overflow_y(
+		const css_computed_style *style)
+{
+	uint8_t bits = style->bits[OVERFLOW_Y_INDEX];
+	bits &= OVERFLOW_Y_MASK;
+	bits >>= OVERFLOW_Y_SHIFT;
+
+	/* 3bits: type */
+	return bits;
+}
+#undef OVERFLOW_Y_MASK
+#undef OVERFLOW_Y_SHIFT
+#undef OVERFLOW_Y_INDEX
 
 #define POSITION_INDEX 22
 #define POSITION_SHIFT 0
@@ -1432,46 +1510,6 @@ static inline uint8_t get_background_position(
 #define DISPLAY_SHIFT 2
 #define DISPLAY_MASK  0x7c
 static inline uint8_t get_display(
-		const css_computed_style *style, bool root)
-{
-	uint8_t position;
-	uint8_t bits = style->bits[DISPLAY_INDEX];
-	bits &= DISPLAY_MASK;
-	bits >>= DISPLAY_SHIFT;
-
-	/* Return computed display as per $9.7 */
-	position = css_computed_position(style);
-
-	/* 5bits: type */
-	if (bits == CSS_DISPLAY_NONE)
-		return bits; /* 1. */
-
-	if ((position == CSS_POSITION_ABSOLUTE || 
-			position == CSS_POSITION_FIXED) /* 2. */ ||
-			css_computed_float(style) != CSS_FLOAT_NONE /* 3. */ ||
-			root /* 4. */) {
-		if (bits == CSS_DISPLAY_INLINE_TABLE) {
-			return CSS_DISPLAY_TABLE;
-		} else if (bits == CSS_DISPLAY_INLINE ||
-				bits == CSS_DISPLAY_RUN_IN ||
-				bits == CSS_DISPLAY_TABLE_ROW_GROUP ||
-				bits == CSS_DISPLAY_TABLE_COLUMN ||
-				bits == CSS_DISPLAY_TABLE_COLUMN_GROUP ||
-				bits == CSS_DISPLAY_TABLE_HEADER_GROUP ||
-				bits == CSS_DISPLAY_TABLE_FOOTER_GROUP ||
-				bits == CSS_DISPLAY_TABLE_ROW ||
-				bits == CSS_DISPLAY_TABLE_CELL ||
-				bits == CSS_DISPLAY_TABLE_CAPTION ||
-				bits == CSS_DISPLAY_INLINE_BLOCK) {
-			return CSS_DISPLAY_BLOCK;
-		}
-	}
-
-	/* 5. */
-	return bits;
-}
-
-static inline uint8_t get_display_static(
 		const css_computed_style *style)
 {
 	uint8_t bits = style->bits[DISPLAY_INDEX];
@@ -1481,7 +1519,6 @@ static inline uint8_t get_display_static(
 	/* 5bits: type */
 	return bits;
 }
-
 #undef DISPLAY_MASK
 #undef DISPLAY_SHIFT
 #undef DISPLAY_INDEX
@@ -1812,20 +1849,20 @@ static inline uint8_t get_page_break_inside(
 #define ORPHANS_MASK 0x1
 static inline uint8_t get_orphans(
 		const css_computed_style *style,
-		css_fixed *count)
+		int32_t *orphans)
 {
 	if (style->page != NULL) {
 		uint8_t bits = style->page->bits[ORPHANS_INDEX];
 		bits &= ORPHANS_MASK;
 		bits >>= ORPHANS_SHIFT;
 		
-		*count = style->page->orphans;
+		*orphans = style->page->orphans;
 		
 		/* 1bit: type */
 		return bits;
 	}
 	
-	*count = INTTOFIX(2);
+	*orphans = 2;
 	return CSS_ORPHANS_SET;
 }
 #undef ORPHANS_MASK
@@ -1837,20 +1874,20 @@ static inline uint8_t get_orphans(
 #define WIDOWS_MASK 0x2
 static inline uint8_t get_widows(
 		const css_computed_style *style,
-		css_fixed *count)
+		int32_t *widows)
 {
 	if (style->page != NULL) {
 		uint8_t bits = style->page->bits[WIDOWS_INDEX];
 		bits &= WIDOWS_MASK;
 		bits >>= WIDOWS_SHIFT;
 		
-		*count = style->page->orphans;
+		*widows = style->page->widows;
 		
 		/* 1bit: type */
 		return bits;
 	}
 	
-	*count = INTTOFIX(2);
+	*widows = 2;
 	return CSS_WIDOWS_SET;
 }
 #undef WIDOWS_MASK
