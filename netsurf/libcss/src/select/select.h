@@ -58,8 +58,6 @@ typedef struct css_select_state {
 	reject_item reject_cache[128];	/* Reject cache (filled from end) */
 	reject_item *next_reject;	/* Next free slot in reject cache */
 
-	const css_bloom *bloom;		/* Bloom filter */
-
 	prop_state props[CSS_N_PROPERTIES][CSS_PSEUDO_ELEMENT_COUNT];
 } css_select_state;
 
@@ -69,8 +67,8 @@ static inline void advance_bytecode(css_style *style, uint32_t n_bytes)
 	style->bytecode = style->bytecode + (n_bytes / sizeof(css_code_t));
 }
 
-bool css__outranks_existing(uint16_t op, bool important,
-		css_select_state *state, bool inherit);
+bool css__outranks_existing(uint16_t op, bool important, css_select_state *state,
+		bool inherit);
 
 #endif
 

@@ -44,7 +44,8 @@ struct css_select_ctx {
 
 	css_select_sheet *sheets;	/**< Array of sheets */
 
-	void *pw;	/**< Client's private selection context */
+	css_allocator_fn alloc;		/**< Allocation routine */
+	void *pw;			/**< Client-specific private data */
 
 	/* Useful interned strings */
 	lwc_string *universal;
@@ -140,7 +141,7 @@ static css_error match_detail(css_select_ctx *ctx, void *node,
 		bool *match, css_pseudo_element *pseudo_element);
 static css_error cascade_style(const css_style *style, css_select_state *state);
 
-static css_error select_font_faces_from_sheet(
+static css_error select_font_faces_from_sheet(css_select_ctx *ctx, 
 		const css_stylesheet *sheet, 
 		css_origin origin, 
 		css_select_font_faces_state *state);
@@ -150,87 +151,24 @@ static void dump_chain(const css_selector *selector);
 #endif
 
 
-/* Exported function documented in public select.h header. */
-css_error css_libcss_node_data_handler(css_select_handler *handler,
-		css_node_data_action action, void *pw, void *node,
-		void *clone_node, void *libcss_node_data)
-{
-	css_bloom *bloom = libcss_node_data;
-	css_bloom *clone_bloom = NULL;
-	css_error error;
-	unsigned int i;
-
-	if (handler == NULL || libcss_node_data == NULL ||
-	    handler->handler_version != CSS_SELECT_HANDLER_VERSION_1) {
-		return CSS_BADPARM;
-	}
-
-	switch (action) {
-	case CSS_NODE_DELETED:
-		free(bloom);
-		break;
-
-	case CSS_NODE_MODIFIED:
-	case CSS_NODE_ANCESTORS_MODIFIED:
-		if (node == NULL) {
-			return CSS_BADPARM;
-		}
-
-		free(bloom);
-
-		/* Don't bother rebuilding bloom here, it can be done
-		 * when the node is selected for.  Just ensure the
-		 * client drops its reference to the libcss_node_data. */
-		error = handler->set_libcss_node_data(pw, node, NULL);
-		if (error != CSS_OK) {
-			return error;
-		}
-		break;
-
-	case CSS_NODE_CLONED:
-		if (node == NULL || clone_node == NULL) {
-			return CSS_BADPARM;
-		}
-
-		clone_bloom = malloc(sizeof(css_bloom) * CSS_BLOOM_SIZE);
-		if (clone_bloom == NULL) {
-			return CSS_NOMEM;
-		}
-
-		for (i = 0; i < CSS_BLOOM_SIZE; i++) {
-			clone_bloom[i] = bloom[i];
-		}
-
-		error = handler->set_libcss_node_data(pw, clone_node,
-				clone_bloom);
-		if (error != CSS_OK) {
-			free(clone_bloom);
-			return error;
-		}
-		break;
-
-	default:
-		return CSS_BADPARM;
-	}
-
-	return CSS_OK;
-}
-
 /**
  * Create a selection context
  *
+ * \param alloc   Memory (de)allocation function
+ * \param pw      Client-specific private data
  * \param result  Pointer to location to receive created context
  * \return CSS_OK on success, appropriate error otherwise.
  */
-css_error css_select_ctx_create(css_select_ctx **result)
+css_error css_select_ctx_create(css_allocator_fn alloc, void *pw,
+		css_select_ctx **result)
 {
 	css_select_ctx *c;
 	css_error error;
 
-	if (result == NULL)
+	if (alloc == NULL || result == NULL)
 		return CSS_BADPARM;
 
-	c = malloc(sizeof(css_select_ctx));
+	c = alloc(NULL, sizeof(css_select_ctx), pw);
 	if (c == NULL)
 		return CSS_NOMEM;
 
@@ -238,9 +176,12 @@ css_error css_select_ctx_create(css_select_ctx **result)
 
 	error = intern_strings(c);
 	if (error != CSS_OK) {
-		free(c);
+		alloc(c, 0, pw);
 		return error;
 	}
+
+	c->alloc = alloc;
+	c->pw = pw;
 
 	*result = c;
 
@@ -261,9 +202,9 @@ css_error css_select_ctx_destroy(css_select_ctx *ctx)
 	destroy_strings(ctx);
 
 	if (ctx->sheets != NULL)
-		free(ctx->sheets);
+		ctx->alloc(ctx->sheets, 0, ctx->pw);
 
-	free(ctx);
+	ctx->alloc(ctx, 0, ctx->pw);
 
 	return CSS_OK;
 }
@@ -316,8 +257,9 @@ css_error css_select_ctx_insert_sheet(css_select_ctx *ctx,
 	if (index > ctx->n_sheets)
 		return CSS_INVALID;
 
-	temp = realloc(ctx->sheets, 
-			(ctx->n_sheets + 1) * sizeof(css_select_sheet));
+	temp = ctx->alloc(ctx->sheets, 
+			(ctx->n_sheets + 1) * sizeof(css_select_sheet),
+			ctx->pw);
 	if (temp == NULL)
 		return CSS_NOMEM;
 
@@ -413,7 +355,6 @@ css_error css_select_ctx_get_sheet(css_select_ctx *ctx, uint32_t index,
  *
  * \param ctx             Selection context to use
  * \param node            Node to select style for
- * \param bloom           Node's bloom filter filled with ancestor tag,id,class
  * \param media           Currently active media types
  * \param inline_style    Corresponding inline style for node, or NULL
  * \param handler         Dispatch table of handler functions
@@ -439,11 +380,10 @@ css_error css_select_style(css_select_ctx *ctx, void *node,
 	css_error error;
 	css_select_state state;
 	void *parent = NULL;
-	css_bloom *bloom = NULL;
-	css_bloom *parent_bloom = NULL;
 
 	if (ctx == NULL || node == NULL || result == NULL || handler == NULL ||
-	    handler->handler_version != CSS_SELECT_HANDLER_VERSION_1)
+			handler->handler_version != 
+					CSS_SELECT_HANDLER_VERSION_1)
 		return CSS_BADPARM;
 
 	/* Set up the selection state */
@@ -456,76 +396,32 @@ css_error css_select_style(css_select_ctx *ctx, void *node,
 			(N_ELEMENTS(state.reject_cache) - 1);
 
 	/* Allocate the result set */
-	state.results = malloc(sizeof(css_select_results));
+	state.results = ctx->alloc(NULL, sizeof(css_select_results), ctx->pw);
 	if (state.results == NULL)
 		return CSS_NOMEM;
+
+	state.results->alloc = ctx->alloc;
+	state.results->pw = ctx->pw;
 
 	for (i = 0; i < CSS_PSEUDO_ELEMENT_COUNT; i++)
 		state.results->styles[i] = NULL;
 
 	/* Base element style is guaranteed to exist */
-	error = css_computed_style_create(
+	error = css_computed_style_create(ctx->alloc, ctx->pw,
 			&state.results->styles[CSS_PSEUDO_ELEMENT_NONE]);
 	if (error != CSS_OK) {
-		free(state.results);
+		ctx->alloc(state.results, 0, ctx->pw);
 		return error;
-	}
-
-	/* Create the node's bloom */
-	bloom = calloc(sizeof(css_bloom), CSS_BLOOM_SIZE);
-	if (bloom == NULL) {
-		error = CSS_NOMEM;
-		goto cleanup;
 	}
 
 	error = handler->parent_node(pw, node, &parent);
 	if (error != CSS_OK)
 		goto cleanup;
 
-	/* Get parent node's bloom filter */
-	if (parent != NULL) {
-		/* Get parent bloom filter */
-		/*   Hideous casting to avoid warnings on all platforms
-		 *   we build for. */
-		error = handler->get_libcss_node_data(pw, parent,
-				(void **) (void *) &state.bloom);
-		if (error != CSS_OK)
-			goto cleanup;
-		/* TODO:
-		 * If state.bloom == NULL, build & set parent node's bloom,
-		 * and use it as state.bloom.  This will speed up the case
-		 * where DOM change has caused bloom to get deleted.
-		 * For now we fall back to a fully satruated bloom filter,
-		 * which is slower but perfectly valid.
-		 */
-	}
-
-	if (state.bloom == NULL) {
-		/* Need to create parent bloom */
-		parent_bloom = malloc(sizeof(css_bloom) * CSS_BLOOM_SIZE);
-		if (parent_bloom == NULL) {
-			error = CSS_NOMEM;
-			goto cleanup;
-		}
-		if (parent != NULL) {
-			/* Have to make up fully saturated bloom filter */
-			for (i = 0; i < CSS_BLOOM_SIZE; i++) {
-				parent_bloom[i] = ~0;
-			}
-		} else {
-			/* Empty bloom filter */
-			for (i = 0; i < CSS_BLOOM_SIZE; i++) {
-				parent_bloom[i] = 0;
-			}
-		}
-
-		state.bloom = parent_bloom;
-	}
-
 	/* Get node's name */
 	error = handler->node_name(pw, node, &state.element);
 	if (error != CSS_OK)
-		goto cleanup;
+		return error;
 
 	/* Get node's ID, if any */
 	error = handler->node_id(pw, node, &state.id);
@@ -533,7 +429,10 @@ css_error css_select_style(css_select_ctx *ctx, void *node,
 		goto cleanup;
 
 	/* Get node's classes, if any */
-	error = handler->node_classes(pw, node,
+	/** \todo Do we really want to force the client to allocate a new array 
+	 * every time we call this? It seems hugely inefficient, given they can 
+	 * cache the data. */
+	error = handler->node_classes(pw, node,	
 			&state.classes, &state.n_classes);
 	if (error != CSS_OK)
 		goto cleanup;
@@ -648,57 +547,6 @@ css_error css_select_style(css_select_ctx *ctx, void *node,
 			goto cleanup;
 	}
 
-	/* Add node name to bloom */
-	if (state.element.name->insensitive == NULL) {
-		if (lwc__intern_caseless_string(
-				state.element.name) != lwc_error_ok) {
-			error = CSS_NOMEM;
-			goto cleanup;
-		}
-	}
-	css_bloom_add_hash(bloom, lwc_string_hash_value(
-			state.element.name->insensitive));
-
-	/* Add id name to bloom */
-	if (state.id != NULL) {
-		if (state.id->insensitive == NULL) {
-			if (lwc__intern_caseless_string(state.id) !=
-					lwc_error_ok) {
-				error = CSS_NOMEM;
-				goto cleanup;
-			}
-		}
-		css_bloom_add_hash(bloom, lwc_string_hash_value(
-				state.id->insensitive));
-	}
-
-	/* Add class names to bloom */
-	if (state.classes != NULL) {
-		lwc_string *s;
-		for (i = 0; i < state.n_classes; i++) {
-			s = state.classes[i];
-			if (s->insensitive == NULL) {
-				if (lwc__intern_caseless_string(s) !=
-						lwc_error_ok) {
-					error = CSS_NOMEM;
-					goto cleanup;
-				}
-			}
-			css_bloom_add_hash(bloom, lwc_string_hash_value(
-					s->insensitive));
-		}
-	}
-
-	/* Merge parent bloom into node bloom */
-	css_bloom_merge(state.bloom, bloom);
-
-	/* Set node bloom filter */
-	error = handler->set_libcss_node_data(pw, node, bloom);
-	if (error != CSS_OK)
-		goto cleanup;
-
-	bloom = NULL;
-
 	*result = state.results;
 	error = CSS_OK;
 
@@ -710,17 +558,11 @@ cleanup:
 		css_select_results_destroy(state.results);
 	}
 
-	if (parent_bloom != NULL) {
-		free(parent_bloom);
-	}
-
-	if (bloom != NULL) {
-		free(bloom);
-	}
-
 	if (state.classes != NULL) {
 		for (i = 0; i < state.n_classes; i++)
 			lwc_string_unref(state.classes[i]);
+
+		ctx->alloc(state.classes, 0, ctx->pw);
 	}
 
 	if (state.id != NULL)
@@ -746,12 +588,14 @@ css_error css_select_results_destroy(css_select_results *results)
 	if (results == NULL)
 		return CSS_BADPARM;
 
-	for (i = 0; i < CSS_PSEUDO_ELEMENT_COUNT; i++) {
-		if (results->styles[i] != NULL)
-			css_computed_style_destroy(results->styles[i]);
+	if (results->styles != NULL) {
+		for (i = 0; i < CSS_PSEUDO_ELEMENT_COUNT; i++) {
+			if (results->styles[i] != NULL)
+				css_computed_style_destroy(results->styles[i]);
+		}
 	}
 
-	free(results);
+	results->alloc(results, 0, results->pw);
 
 	return CSS_OK;
 }
@@ -789,7 +633,7 @@ css_error css_select_font_faces(css_select_ctx *ctx,
 		
 		if ((s.media & media) != 0 &&
 				s.sheet->disabled == false) {
-			error = select_font_faces_from_sheet(s.sheet,
+			error = select_font_faces_from_sheet(ctx, s.sheet,
 					s.origin, &state);
 			if (error != CSS_OK)
 				goto cleanup;
@@ -806,16 +650,22 @@ css_error css_select_font_faces(css_select_ctx *ctx,
 		 * the font faces in priority order. */
 		css_select_font_faces_results *results;
 		
-		results = malloc(sizeof(css_select_font_faces_results));
+		results = ctx->alloc(NULL, 
+				sizeof(css_select_font_faces_results),
+				ctx->pw);
 		if (results == NULL) {
 			error = CSS_NOMEM;
 			goto cleanup;
 		}
 		
-		results->font_faces = malloc(
-				n_font_faces * sizeof(css_font_face *));
+		results->alloc = ctx->alloc;
+		results->pw = ctx->pw;
+		
+		results->font_faces = ctx->alloc(NULL, 
+				n_font_faces * sizeof(css_font_face *),
+				ctx->pw);
 		if (results->font_faces == NULL) {
-			free(results);
+			ctx->alloc(results, 0, ctx->pw);
 			error = CSS_NOMEM;
 			goto cleanup;
 		}
@@ -854,13 +704,13 @@ css_error css_select_font_faces(css_select_ctx *ctx,
 	
 cleanup:
 	if (state.ua_font_faces.count != 0) 
-		free(state.ua_font_faces.font_faces);
+		ctx->alloc(state.ua_font_faces.font_faces, 0, ctx->pw);
 
 	if (state.user_font_faces.count != 0) 
-		free(state.user_font_faces.font_faces);
+		ctx->alloc(state.user_font_faces.font_faces, 0, ctx->pw);
 	
 	if (state.author_font_faces.count != 0) 
-		free(state.author_font_faces.font_faces);
+		ctx->alloc(state.author_font_faces.font_faces, 0, ctx->pw);
 	
 	return error;
 }
@@ -880,10 +730,10 @@ css_error css_select_font_faces_results_destroy(
 	if (results->font_faces != NULL) {
 		/* Don't destroy the individual css_font_faces, they're owned
 		   by their respective sheets */
-		free(results->font_faces);
+		results->alloc(results->font_faces, 0, results->pw);
 	}
 	
-	free(results);
+	results->alloc(results, 0, results->pw);
 	
 	return CSS_OK;
 }
@@ -1285,7 +1135,7 @@ static inline bool _rule_applies_to_media(const css_rule *rule, uint64_t media)
 	return applies;
 }
 
-static css_error _select_font_face_from_rule(
+static css_error _select_font_face_from_rule(css_select_ctx *ctx, 
 		const css_rule_font_face *rule, css_origin origin,
 		css_select_font_faces_state *state)
 {
@@ -1317,7 +1167,8 @@ static css_error _select_font_face_from_rule(
 			index = faces->count++;			
 			new_size = faces->count * sizeof(css_font_face *);
 			
-			new_faces = realloc(faces->font_faces, new_size);
+			new_faces = ctx->alloc(faces->font_faces, 
+					new_size, ctx->pw);
 			if (new_faces == NULL) {
 				faces->count = 0;
 				return CSS_NOMEM;
@@ -1331,7 +1182,7 @@ static css_error _select_font_face_from_rule(
 	return CSS_OK;
 }
 
-static css_error select_font_faces_from_sheet(
+static css_error select_font_faces_from_sheet(css_select_ctx *ctx, 
 		const css_stylesheet *sheet, 
 		css_origin origin, 
 		css_select_font_faces_state *state)
@@ -1371,6 +1222,7 @@ static css_error select_font_faces_from_sheet(
 			css_error error;
 			
 			error = _select_font_face_from_rule(
+					ctx, 
 					(const css_rule_font_face *) rule,
 					origin,
 					state);
@@ -1481,6 +1333,31 @@ static const css_selector *_selector_next(const css_selector **node,
 	return ret;
 }
 
+static bool _rule_good_for_element_name(const css_selector *selector,
+		css_select_rule_source *src, css_select_state *state)
+{
+	/* If source of rule is element or universal hash, we know the
+	 * element name is a match.  If it comes from the class or id hash,
+	 * we have to test for a match */
+	if (src->source == CSS_SELECT_RULE_SRC_ID ||
+			src->source == CSS_SELECT_RULE_SRC_CLASS) {
+		if (lwc_string_length(selector->data.qname.name) != 1 ||
+				lwc_string_data(
+					selector->data.qname.name)[0] != '*') {
+			bool match;
+			if (lwc_string_caseless_isequal(
+					selector->data.qname.name,
+					state->element.name,
+					&match) == lwc_error_ok &&
+					match == false) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 css_error match_selectors_in_sheet(css_select_ctx *ctx, 
 		const css_stylesheet *sheet, css_select_state *state)
 {
@@ -1496,34 +1373,28 @@ css_error match_selectors_in_sheet(css_select_ctx *ctx,
 	const css_selector **univ_selectors = &empty_selector;
 	css_selector_hash_iterator univ_iterator;
 	css_select_rule_source src = { CSS_SELECT_RULE_SRC_ELEMENT, 0 };
-	struct css_hash_selection_requirments req;
 	css_error error;
 
-	/* Set up general selector chain requirments */
-	req.media = state->media;
-	req.node_bloom = state->bloom;
-	req.uni = ctx->universal;
-
 	/* Find hash chain that applies to current node */
-	req.qname = state->element;
 	error = css__selector_hash_find(sheet->selectors, 
-			&req, &node_iterator,
+			&state->element, &node_iterator, 
 			&node_selectors);
 	if (error != CSS_OK)
 		goto cleanup;
 
 	if (state->classes != NULL && n_classes > 0) {
 		/* Find hash chains for node classes */
-		class_selectors = malloc(n_classes * sizeof(css_selector **));
+		class_selectors = ctx->alloc(NULL, 
+				n_classes * sizeof(css_selector **), 
+				ctx->pw);
 		if (class_selectors == NULL) {
 			error = CSS_NOMEM;
 			goto cleanup;
 		}
 
 		for (i = 0; i < n_classes; i++) {
-			req.class = state->classes[i];
 			error = css__selector_hash_find_by_class(
-					sheet->selectors, &req,
+					sheet->selectors, state->classes[i],
 					&class_iterator, &class_selectors[i]);
 			if (error != CSS_OK)
 				goto cleanup;
@@ -1532,15 +1403,14 @@ css_error match_selectors_in_sheet(css_select_ctx *ctx,
 
 	if (state->id != NULL) {
 		/* Find hash chain for node ID */
-		req.id = state->id;
 		error = css__selector_hash_find_by_id(sheet->selectors, 
-				&req, &id_iterator, &id_selectors);
+				state->id, &id_iterator, &id_selectors);
 		if (error != CSS_OK)
 			goto cleanup;
 	}
 
 	/* Find hash chain for universal selector */
-	error = css__selector_hash_find_universal(sheet->selectors, &req,
+	error = css__selector_hash_find_universal(sheet->selectors,
 			&univ_iterator, &univ_selectors);
 	if (error != CSS_OK)
 		goto cleanup;
@@ -1563,32 +1433,46 @@ css_error match_selectors_in_sheet(css_select_ctx *ctx,
 		 * selector here */
 		assert(selector != NULL);
 
-		/* Match and handle the selector chain */
-		error = match_selector_chain(ctx, selector, state);
-		if (error != CSS_OK)
-			goto cleanup;
+		/* No bytecode if rule body is empty or wholly invalid --
+		 * Only interested in rules with bytecode */
+		if (((css_rule_selector *) selector->rule)->style != NULL) {
+			/* Ignore any selectors contained in rules which are a
+			 * child of an @media block that doesn't match the
+			 * current media requirements. */
+			if (_rule_applies_to_media(selector->rule,
+					state->media)) {
+				if (_rule_good_for_element_name(selector, &src,
+						state)) {
+					error = match_selector_chain(
+							ctx, selector,
+							state);
+					if (error != CSS_OK)
+						goto cleanup;
+				}
+			}
+		}
 
 		/* Advance to next selector in whichever chain we extracted 
 		 * the processed selector from. */
 		switch (src.source) {
 		case CSS_SELECT_RULE_SRC_ELEMENT:
-			error = node_iterator(&req, node_selectors,
-					&node_selectors);
+			error = node_iterator(
+					node_selectors,	&node_selectors);
 			break;
 
 		case CSS_SELECT_RULE_SRC_ID:
-			error = id_iterator(&req, id_selectors,
-					&id_selectors);
+			error = id_iterator(
+					id_selectors, &id_selectors);
 			break;
 
 		case CSS_SELECT_RULE_SRC_UNIVERSAL:
-			error = univ_iterator(&req, univ_selectors,
-					&univ_selectors);
+			error = univ_iterator(
+					univ_selectors, &univ_selectors);
 			break;
 
 		case CSS_SELECT_RULE_SRC_CLASS:
-			req.class = state->classes[src.class];
-			error = class_iterator(&req, class_selectors[src.class],
+			error = class_iterator(
+					class_selectors[src.class],
 					&class_selectors[src.class]);
 			break;
 		}
@@ -1600,7 +1484,7 @@ css_error match_selectors_in_sheet(css_select_ctx *ctx,
 	error = CSS_OK;
 cleanup:
 	if (class_selectors != NULL)
-		free(class_selectors);
+		ctx->alloc(class_selectors, 0, ctx->pw);
 
 	return error;
 }
@@ -1716,7 +1600,7 @@ css_error match_selector_chain(css_select_ctx *ctx,
 
 	/* Ensure that the appropriate computed style exists */
 	if (state->results->styles[pseudo] == NULL) {
-		error = css_computed_style_create(
+		error = css_computed_style_create(ctx->alloc, ctx->pw, 
 				&state->results->styles[pseudo]); 
 		if (error != CSS_OK)
 			return error;

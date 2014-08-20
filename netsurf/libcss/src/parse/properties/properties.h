@@ -287,13 +287,7 @@ css_error css__parse_outline_width(css_language *c,
 		const parserutils_vector *vector, int *ctx, 
 		css_style *result);
 css_error css__parse_overflow(css_language *c,
-		const parserutils_vector *vector, int *ctx,
-		css_style *result);
-css_error css__parse_overflow_x(css_language *c,
-		const parserutils_vector *vector, int *ctx,
-		css_style *result);
-css_error css__parse_overflow_y(css_language *c,
-		const parserutils_vector *vector, int *ctx,
+		const parserutils_vector *vector, int *ctx, 
 		css_style *result);
 css_error css__parse_padding(css_language *c,
 		const parserutils_vector *vector, int *ctx,
@@ -411,9 +405,6 @@ css_error css__parse_width(css_language *c,
 		css_style *result);
 css_error css__parse_word_spacing(css_language *c,
 		const parserutils_vector *vector, int *ctx, 
-		css_style *result);
-css_error css__parse_writing_mode(css_language *c,
-		const parserutils_vector *vector, int *ctx,
 		css_style *result);
 css_error css__parse_z_index(css_language *c,
 		const parserutils_vector *vector, int *ctx, 

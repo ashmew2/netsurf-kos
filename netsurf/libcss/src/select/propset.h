@@ -22,7 +22,7 @@ static const css_computed_uncommon default_uncommon = {
 	  0,
 	  (CSS_WORD_SPACING_INHERIT << 2) | 
 		(CSS_COUNTER_INCREMENT_NONE << 1) | CSS_COUNTER_RESET_NONE,
-	  (CSS_CURSOR_INHERIT << 3) | (CSS_WRITING_MODE_INHERIT << 1) | 0,
+	  (CSS_CURSOR_INHERIT << 3) | 0,
 	  0,
 	  0,
 	  (CSS_CLIP_AUTO << 2) | CSS_CONTENT_NORMAL
@@ -41,7 +41,8 @@ static const css_computed_uncommon default_uncommon = {
 
 #define ENSURE_UNCOMMON do {						\
 	if (style->uncommon == NULL) {					\
-		style->uncommon = malloc(sizeof(css_computed_uncommon));\
+		style->uncommon = style->alloc(NULL, 			\
+			sizeof(css_computed_uncommon), style->pw);	\
 		if (style->uncommon == NULL)				\
 			return CSS_NOMEM;				\
 									\
@@ -64,7 +65,8 @@ static const css_computed_page default_page = {
 
 #define ENSURE_PAGE do {						\
 	if (style->page == NULL) {					\
-		style->page = malloc(sizeof(css_computed_page));	\
+		style->page = style->alloc(NULL, 			\
+			sizeof(css_computed_page), style->pw);		\
 		if (style->page == NULL)				\
 			return CSS_NOMEM;				\
 									\
@@ -152,6 +154,7 @@ static inline css_error set_outline_width(
 #define BORDER_SPACING_MASK  0x1
 #define BORDER_SPACING_INDEX1 2
 #define BORDER_SPACING_SHIFT1 0
+#define BORDER_SPACING_MASK1 0xff
 static inline css_error set_border_spacing(
 		css_computed_style *style, uint8_t type, 
 		css_fixed hlength, css_unit hunit,
@@ -170,7 +173,8 @@ static inline css_error set_border_spacing(
 	bits = &style->uncommon->bits[BORDER_SPACING_INDEX1];
 
 	/* 8bits: hhhhvvvv : hunit | vunit */
-	*bits = (((hunit << 4) | vunit) << BORDER_SPACING_SHIFT1);
+	*bits = (*bits & ~BORDER_SPACING_MASK1) |
+			(((hunit << 4) | vunit) << BORDER_SPACING_SHIFT1);
 
 
 	style->uncommon->border_spacing[0] = hlength;
@@ -178,6 +182,7 @@ static inline css_error set_border_spacing(
 
 	return CSS_OK;
 }
+#undef BORDER_SPACING_MASK1
 #undef BORDER_SPACING_SHIFT1
 #undef BORDER_SPACING_INDEX1
 #undef BORDER_SPACING_MASK
@@ -208,28 +213,6 @@ static inline css_error set_word_spacing(
 #undef WORD_SPACING_MASK
 #undef WORD_SPACING_SHIFT
 #undef WORD_SPACING_INDEX
-
-#define WRITING_MODE_INDEX 4
-#define WRITING_MODE_SHIFT 1
-#define WRITING_MODE_MASK  0x6
-static inline css_error set_writing_mode(
-		css_computed_style *style, uint8_t type)
-{
-	uint8_t *bits;
-
-	ENSURE_UNCOMMON;
-
-	bits = &style->uncommon->bits[WRITING_MODE_INDEX];
-
-	/* 2bits: type */
-	*bits = (*bits & ~WRITING_MODE_MASK) |
-			((type & 0x3) << WRITING_MODE_SHIFT);
-
-	return CSS_OK;
-}
-#undef WRITING_MODE_MASK
-#undef WRITING_MODE_SHIFT
-#undef WRITING_MODE_INDEX
 
 #define COUNTER_INCREMENT_INDEX 3
 #define COUNTER_INCREMENT_SHIFT 1
@@ -262,7 +245,7 @@ static inline css_error set_counter_increment(
 			lwc_string_unref(c->name);
 
 		if (oldcounters != counters)
-			free(oldcounters);
+			style->alloc(oldcounters, 0, style->pw);
 	}
 
 	return CSS_OK;
@@ -302,7 +285,7 @@ static inline css_error set_counter_reset(
 			lwc_string_unref(c->name);
 
 		if (oldcounters != counters)
-			free(oldcounters);
+			style->alloc(oldcounters, 0, style->pw);
 	}
 
 	return CSS_OK;
@@ -342,7 +325,7 @@ static inline css_error set_cursor(
 			lwc_string_unref(*s);
 
 		if (oldurls != urls)
-			free(oldurls);
+			style->alloc(oldurls, 0, style->pw);
 	}
 
 	return CSS_OK;
@@ -356,8 +339,10 @@ static inline css_error set_cursor(
 #define CLIP_MASK  0xfc
 #define CLIP_INDEX1 5
 #define CLIP_SHIFT1 0
+#define CLIP_MASK1 0xff
 #define CLIP_INDEX2 6
 #define CLIP_SHIFT2 0
+#define CLIP_MASK2 0xff
 static inline css_error set_clip(
 		css_computed_style *style, uint8_t type, 
 		css_computed_clip_rect *rect)
@@ -381,12 +366,14 @@ static inline css_error set_clip(
 		bits = &style->uncommon->bits[CLIP_INDEX1];
 
 		/* 8bits: ttttrrrr : top | right */
-		*bits = (((rect->tunit << 4) | rect->runit) << CLIP_SHIFT1);
+		*bits = (*bits & ~CLIP_MASK1) |
+			(((rect->tunit << 4) | rect->runit) << CLIP_SHIFT1);
 
 		bits = &style->uncommon->bits[CLIP_INDEX2];
 
 		/* 8bits: bbbbllll : bottom | left */
-		*bits = (((rect->bunit << 4) | rect->lunit) << CLIP_SHIFT2);
+		*bits = (*bits & ~CLIP_MASK2) |
+			(((rect->bunit << 4) | rect->lunit) << CLIP_SHIFT2);
 
 		style->uncommon->clip[0] = rect->top;
 		style->uncommon->clip[1] = rect->right;
@@ -396,8 +383,10 @@ static inline css_error set_clip(
 
 	return CSS_OK;
 }
+#undef CLIP_MASK2
 #undef CLIP_SHIFT2
 #undef CLIP_INDEX2
+#undef CLIP_MASK1
 #undef CLIP_SHIFT1
 #undef CLIP_INDEX1
 #undef CLIP_MASK
@@ -480,7 +469,7 @@ static inline css_error set_content(
 		}
 
 		if (oldcontent != content)
-			free(oldcontent);
+			style->alloc(oldcontent, 0, style->pw);
 	}
 
 	return CSS_OK;
@@ -492,6 +481,7 @@ static inline css_error set_content(
 
 #define VERTICAL_ALIGN_INDEX 0
 #define VERTICAL_ALIGN_SHIFT 0
+#define VERTICAL_ALIGN_MASK  0xff
 static inline css_error set_vertical_align(
 		css_computed_style *style, uint8_t type, 
 		css_fixed length, css_unit unit)
@@ -499,17 +489,20 @@ static inline css_error set_vertical_align(
 	uint8_t *bits = &style->bits[VERTICAL_ALIGN_INDEX];
 
 	/* 8bits: uuuutttt : units | type */
-	*bits = (((type & 0xf) | (unit << 4)) << VERTICAL_ALIGN_SHIFT);
+	*bits = (*bits & ~VERTICAL_ALIGN_MASK) |
+			(((type & 0xf) | (unit << 4)) << VERTICAL_ALIGN_SHIFT);
 
 	style->vertical_align = length;
 
 	return CSS_OK;
 }
+#undef VERTICAL_ALIGN_MASK
 #undef VERTICAL_ALIGN_SHIFT
 #undef VERTICAL_ALIGN_INDEX
 
 #define FONT_SIZE_INDEX 1
 #define FONT_SIZE_SHIFT 0
+#define FONT_SIZE_MASK  0xff
 static inline css_error set_font_size(
 		css_computed_style *style, uint8_t type, 
 		css_fixed length, css_unit unit)
@@ -517,12 +510,14 @@ static inline css_error set_font_size(
 	uint8_t *bits = &style->bits[FONT_SIZE_INDEX];
 
 	/* 8bits: uuuutttt : units | type */
-	*bits = (((type & 0xf) | (unit << 4)) << FONT_SIZE_SHIFT);
+	*bits = (*bits & ~FONT_SIZE_MASK) |
+			(((type & 0xf) | (unit << 4)) << FONT_SIZE_SHIFT);
 
 	style->font_size = length;
 
 	return CSS_OK;
 }
+#undef FONT_SIZE_MASK
 #undef FONT_SIZE_SHIFT
 #undef FONT_SIZE_INDEX
 
@@ -715,7 +710,7 @@ static inline css_error set_quotes(
 			lwc_string_unref(*s);
 
 		if (oldquotes != quotes)
-			free(oldquotes);
+			style->alloc(oldquotes, 0, style->pw);
 	}
 
 	return CSS_OK;
@@ -1411,41 +1406,23 @@ static inline css_error set_padding_left(
 #undef PADDING_LEFT_SHIFT
 #undef PADDING_LEFT_INDEX
 
-#define OVERFLOW_X_INDEX 21
-#define OVERFLOW_X_SHIFT 0
-#define OVERFLOW_X_MASK  0x7
-static inline css_error set_overflow_x(
+#define OVERFLOW_INDEX 21
+#define OVERFLOW_SHIFT 0
+#define OVERFLOW_MASK  0x7
+static inline css_error set_overflow(
 		css_computed_style *style, uint8_t type)
 {
-	uint8_t *bits = &style->bits[OVERFLOW_X_INDEX];
+	uint8_t *bits = &style->bits[OVERFLOW_INDEX];
 
 	/* 3bits: type */
-	*bits = (*bits & ~OVERFLOW_X_MASK) |
-			((type & 0x7) << OVERFLOW_X_SHIFT);
+	*bits = (*bits & ~OVERFLOW_MASK) |
+			((type & 0x7) << OVERFLOW_SHIFT);
 
 	return CSS_OK;
 }
-#undef OVERFLOW_X_MASK
-#undef OVERFLOW_X_SHIFT
-#undef OVERFLOW_X_INDEX
-
-#define OVERFLOW_Y_INDEX 34
-#define OVERFLOW_Y_SHIFT 5
-#define OVERFLOW_Y_MASK  0xe0
-static inline css_error set_overflow_y(
-		css_computed_style *style, uint8_t type)
-{
-	uint8_t *bits = &style->bits[OVERFLOW_Y_INDEX];
-
-	/* 3bits: type */
-	*bits = (*bits & ~OVERFLOW_Y_MASK) |
-			((type & 0x7) << OVERFLOW_Y_SHIFT);
-
-	return CSS_OK;
-}
-#undef OVERFLOW_Y_MASK
-#undef OVERFLOW_Y_SHIFT
-#undef OVERFLOW_Y_INDEX
+#undef OVERFLOW_MASK
+#undef OVERFLOW_SHIFT
+#undef OVERFLOW_INDEX
 
 #define POSITION_INDEX 22
 #define POSITION_SHIFT 0
@@ -1548,6 +1525,7 @@ static inline css_error set_white_space(
 #define BACKGROUND_POSITION_MASK  0x80
 #define BACKGROUND_POSITION_INDEX1 26
 #define BACKGROUND_POSITION_SHIFT1 0
+#define BACKGROUND_POSITION_MASK1 0xff
 static inline css_error set_background_position(
 		css_computed_style *style, uint8_t type, 
 		css_fixed hlength, css_unit hunit,
@@ -1564,13 +1542,15 @@ static inline css_error set_background_position(
 	bits = &style->bits[BACKGROUND_POSITION_INDEX1];
 
 	/* 8bits: hhhhvvvv : hunit | vunit */
-	*bits = (((hunit << 4) | vunit) << BACKGROUND_POSITION_SHIFT1);
+	*bits = (*bits & ~BACKGROUND_POSITION_MASK1) |
+			(((hunit << 4) | vunit) << BACKGROUND_POSITION_SHIFT1);
 
 	style->background_position[0] = hlength;
 	style->background_position[1] = vlength;
 
 	return CSS_OK;
 }
+#undef BACKGROUND_POSITION_MASK1
 #undef BACKGROUND_POSITION_SHIFT1
 #undef BACKGROUND_POSITION_INDEX1
 #undef BACKGROUND_POSITION_MASK
@@ -1657,7 +1637,7 @@ static inline css_error set_font_family(
 			lwc_string_unref(*s);
 
 		if (oldnames != names)
-			free(oldnames);
+			style->alloc(oldnames, 0, style->pw);
 	}
 
 	return CSS_OK;
@@ -1970,12 +1950,12 @@ static inline css_error set_page_break_inside(
 #define ORPHANS_SHIFT 0
 #define ORPHANS_MASK 0x1
 static inline css_error set_orphans(
-		css_computed_style *style, uint8_t type, int32_t count)
+		css_computed_style *style, uint8_t type, css_fixed count)
 {
 	uint8_t *bits;
 	
 	if (style->page == NULL) {
-		if (type == CSS_ORPHANS_SET && count == 2) {
+		if (type == CSS_ORPHANS_SET && count == INTTOFIX(2)) {
 			return CSS_OK;
 		}
 	}
@@ -1999,12 +1979,12 @@ static inline css_error set_orphans(
 #define WIDOWS_SHIFT 1
 #define WIDOWS_MASK 0x2
 static inline css_error set_widows(
-		css_computed_style *style, uint8_t type, int32_t count)
+		css_computed_style *style, uint8_t type, css_fixed count)
 {
 	uint8_t *bits;
 	
 	if (style->page == NULL) {
-		if (type == CSS_WIDOWS_SET && count == 2) {
+		if (type == CSS_WIDOWS_SET && count == INTTOFIX(2)) {
 			return CSS_OK;
 		}
 	}

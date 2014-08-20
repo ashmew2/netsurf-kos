@@ -105,10 +105,14 @@ struct css_parser
 
 	css_parser_event_handler event;	/**< Client's event handler */
 	void *event_pw;			/**< Client data for event handler */
+
+	css_allocator_fn alloc;		/**< Memory (de)allocation function */
+	void *pw;			/**< Client-specific private data */
 };
 
 static css_error css__parser_create_internal(const char *charset, 
-		css_charset_source cs_source, parser_state initial, 
+		css_charset_source cs_source,
+		css_allocator_fn alloc, void *pw, parser_state initial, 
 		css_parser **parser);
 
 static css_error transition(css_parser *parser, parser_state to,
@@ -186,18 +190,21 @@ static css_error (*parseFuncs[])(css_parser *parser) = {
  *
  * \param charset     Charset of data, if known, or NULL
  * \param cs_source   Source of charset information, or CSS_CHARSET_DEFAULT
+ * \param alloc       Memory (de)allocation function
+ * \param pw          Pointer to client-specific private data
  * \param parser      Pointer to location to receive parser instance
  * \return CSS_OK on success,
  *         CSS_BADPARM on bad parameters,
  *         CSS_NOMEM on memory exhaustion
  */
 css_error css__parser_create(const char *charset, css_charset_source cs_source,
+		css_allocator_fn alloc, void *pw, 
 		css_parser **parser)
 {
 	parser_state initial = { sStart, 0 };
 
 	return css__parser_create_internal(charset, cs_source,
-			initial, parser);
+			alloc, pw, initial, parser);
 }
 
 /**
@@ -205,18 +212,21 @@ css_error css__parser_create(const char *charset, css_charset_source cs_source,
  *
  * \param charset     Charset of data, if known, or NULL
  * \param cs_source   Source of charset information, or CSS_CHARSET_DEFAULT
+ * \param alloc       Memory (de)allocation function
+ * \param pw          Pointer to client-specific private data
  * \param parser      Pointer to location to receive parser instance
  * \return CSS_OK on success,
  *         CSS_BADPARM on bad parameters,
  *         CSS_NOMEM on memory exhaustion
  */
 css_error css__parser_create_for_inline_style(const char *charset,
-		css_charset_source cs_source, css_parser **parser)
+		css_charset_source cs_source,
+		css_allocator_fn alloc, void *pw, css_parser **parser)
 {
 	parser_state initial = { sInlineStyle, 0 };
 
 	return css__parser_create_internal(charset, cs_source,
-			initial, parser);
+			alloc, pw, initial, parser);
 }
 
 /**
@@ -240,7 +250,7 @@ css_error css__parser_destroy(css_parser *parser)
 
 	parserutils_inputstream_destroy(parser->stream);
 
-	free(parser);
+	parser->alloc(parser, 0, parser->pw);
 
 	return CSS_OK;
 }
@@ -380,6 +390,8 @@ bool css__parser_quirks_permitted(css_parser *parser)
  *
  * \param charset     Charset of data, if known, or NULL
  * \param cs_source   Source of charset information, or CSS_CHARSET_DEFAULT
+ * \param alloc       Memory (de)allocation function
+ * \param pw          Pointer to client-specific private data
  * \param initial     The required initial state of the parser
  * \param parser      Pointer to location to receive parser instance
  * \return CSS_OK on success,
@@ -387,61 +399,66 @@ bool css__parser_quirks_permitted(css_parser *parser)
  *         CSS_NOMEM on memory exhaustion
  */
 css_error css__parser_create_internal(const char *charset, 
-		css_charset_source cs_source, parser_state initial, 
+		css_charset_source cs_source,
+		css_allocator_fn alloc, void *pw, parser_state initial, 
 		css_parser **parser)
 {
 	css_parser *p;
 	parserutils_error perror;
 	css_error error;
 
-	if (parser == NULL)
+	if (alloc == NULL || parser == NULL)
 		return CSS_BADPARM;
 
-	p = malloc(sizeof(css_parser));
+	p = alloc(NULL, sizeof(css_parser), pw);
 	if (p == NULL)
 		return CSS_NOMEM;
 
 	perror = parserutils_inputstream_create(charset, cs_source,
-			css__charset_extract, &p->stream);
+			css__charset_extract, (parserutils_alloc) alloc, pw,
+			&p->stream);
 	if (perror != PARSERUTILS_OK) {
-		free(p);
+		alloc(p, 0, pw);
 		return css_error_from_parserutils_error(perror);
 	}
 
-	error = css__lexer_create(p->stream, &p->lexer);
+	error = css__lexer_create(p->stream, alloc, pw, &p->lexer);
 	if (error != CSS_OK) {
 		parserutils_inputstream_destroy(p->stream);
-		free(p);
+		alloc(p, 0, pw);
 		return error;
 	}
 
 	perror = parserutils_stack_create(sizeof(parser_state), 
-			STACK_CHUNK, &p->states);
+			STACK_CHUNK, (parserutils_alloc) alloc, pw,
+			&p->states);
 	if (perror != PARSERUTILS_OK) {
 		css__lexer_destroy(p->lexer);
 		parserutils_inputstream_destroy(p->stream);
-		free(p);
+		alloc(p, 0, pw);
 		return css_error_from_parserutils_error(perror);
 	}
 
 	perror = parserutils_vector_create(sizeof(css_token), 
-			STACK_CHUNK, &p->tokens);
+			STACK_CHUNK, (parserutils_alloc) alloc, pw,
+			&p->tokens);
 	if (perror != PARSERUTILS_OK) {
 		parserutils_stack_destroy(p->states);
 		css__lexer_destroy(p->lexer);
 		parserutils_inputstream_destroy(p->stream);
-		free(p);
+		alloc(p, 0, pw);
 		return css_error_from_parserutils_error(perror);
 	}
 
 	perror = parserutils_stack_create(sizeof(char), 
-			STACK_CHUNK, &p->open_items);
+			STACK_CHUNK, (parserutils_alloc) alloc, pw,
+			&p->open_items);
 	if (perror != PARSERUTILS_OK) {
 		parserutils_vector_destroy(p->tokens);
 		parserutils_stack_destroy(p->states);
 		css__lexer_destroy(p->lexer);
 		parserutils_inputstream_destroy(p->stream);
-		free(p);
+		alloc(p, 0, pw);
 		return css_error_from_parserutils_error(perror);
 	}
 
@@ -452,7 +469,7 @@ css_error css__parser_create_internal(const char *charset,
 		parserutils_stack_destroy(p->states);
 		css__lexer_destroy(p->lexer);
 		parserutils_inputstream_destroy(p->stream);
-		free(p);
+		alloc(p, 0, pw);
 		return css_error_from_parserutils_error(perror);
 	}
 
@@ -463,6 +480,8 @@ css_error css__parser_create_internal(const char *charset,
 	p->event = NULL;
 	p->last_was_ws = false;
 	p->event_pw = NULL;
+	p->alloc = alloc;
+	p->pw = pw;
 
 	*parser = p;
 

@@ -60,6 +60,13 @@ static void dump_selector(css_selector *selector, char **ptr);
 static void dump_selector_detail(css_selector_detail *detail, char **ptr);
 static void dump_string(lwc_string *string, char **ptr);
 
+static void *myrealloc(void *data, size_t len, void *pw)
+{
+	UNUSED(pw);
+	
+	return realloc(data, len);
+}
+
 static css_error resolve_url(void *pw,
 		const char *base, lwc_string *rel, lwc_string **abs)
 {
@@ -340,14 +347,12 @@ static void report_fail(const uint8_t *data, size_t datalen, exp_entry *e)
 
 	printf("    Expected entry:\n");
 	printf("	entry type:%d name:%s\n", e->type, e->name);
-	printf("	bytecode len:%" PRIuMAX " used:%" PRIuMAX "\n",
-		(uintmax_t) e->bclen, (uintmax_t) e->bcused);
+	printf("	bytecode len:%ld used:%ld\n", e->bclen, e->bcused);
 	printf("	bytecode ");
 	for (bcoff = 0; bcoff < e->bcused; bcoff++) {
 		printf("%.2x ", ((uint8_t *) e->bytecode)[bcoff]);
 	}
-	printf("\n	  string table len:%" PRIuMAX " used %" PRIuMAX "\n",
-		(uintmax_t) e->stlen, (uintmax_t) e->stused);
+	printf("\n	  string table len:%ld used %ld\n", e->stlen, e->stused);
 /*
 	struct stentry {
 		size_t off;
@@ -382,7 +387,8 @@ void run_test(const uint8_t *data, size_t len, exp_entry *exp, size_t explen)
 	params.font = NULL;
 	params.font_pw = NULL;
 
-	assert(css_stylesheet_create(&params, &sheet) == CSS_OK);
+	assert(css_stylesheet_create(&params, myrealloc, NULL, 
+			&sheet) == CSS_OK);
 
 	error = css_stylesheet_append_data(sheet, data, len);
 	if (error != CSS_OK && error != CSS_NEEDDATA) {
@@ -403,7 +409,7 @@ void run_test(const uint8_t *data, size_t len, exp_entry *exp, size_t explen)
 
 		if (error == CSS_OK) {
 			css_stylesheet *import;
-			char *buf = malloc(lwc_string_length(url) + 1);
+			char *buf = alloca(lwc_string_length(url) + 1);
 
 			memcpy(buf, lwc_string_data(url), 
 					lwc_string_length(url));
@@ -412,15 +418,13 @@ void run_test(const uint8_t *data, size_t len, exp_entry *exp, size_t explen)
 			params.url = buf;
 
 			assert(css_stylesheet_create(&params,
-					&import) == CSS_OK);
+				myrealloc, NULL, &import) == CSS_OK);
 
 			assert(css_stylesheet_register_import(sheet,
 				import) == CSS_OK);
 
 			error = CSS_IMPORTS_PENDING;
 			lwc_string_unref(url);
-
-			free(buf);
 		}
 	}
 
@@ -515,9 +519,9 @@ bool validate_rule_selector(css_rule_selector *s, exp_entry *e)
 
 		if ((s->style->used * sizeof(css_code_t)) != e->bcused) {
 			printf("FAIL Bytecode lengths differ\n"
-			       "    Got length %" PRIuMAX ", Expected %" PRIuMAX "\n",
-				(uintmax_t) (s->style->used * sizeof(css_code_t)),
-				(uintmax_t) e->bcused);
+			       "    Got length %ld, Expected %u\n",
+				(s->style->used * sizeof(css_code_t)), 
+				(int) e->bcused);
 			return true;
 		}
 

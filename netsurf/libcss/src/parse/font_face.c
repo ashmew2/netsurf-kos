@@ -228,8 +228,9 @@ static css_error font_face_parse_src(css_language *c,
 		/* This will be inefficient if there are a lot of locations - 
 		 * probably not a problem in practice.
 		 */
-		new_srcs = realloc(srcs, 
-				(n_srcs + 1) * sizeof(css_font_face_src));
+		new_srcs = c->alloc(srcs, 
+				(n_srcs + 1) * sizeof(css_font_face_src),
+				c->pw);
 		if (new_srcs == NULL) {
 			error = CSS_NOMEM;
 			goto cleanup;
@@ -251,7 +252,7 @@ cleanup:
 	if (error != CSS_OK) {
 		*ctx = orig_ctx;
 		if (srcs != NULL) 
-			free(srcs);
+			c->alloc(srcs, 0, c->pw);
 	}
 
 	return error;
@@ -381,7 +382,8 @@ css_error css__parse_font_descriptor(css_language *c,
 	bool match;
 
 	if (font_face == NULL) {
-		error = css__font_face_create(&font_face);
+		error = css__font_face_create(c->sheet->alloc, 
+			     c->sheet->pw, &font_face);
 		if (error != CSS_OK) {
 			return error;
 		}

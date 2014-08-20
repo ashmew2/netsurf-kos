@@ -30,21 +30,19 @@ css_error css__cascade_quotes(uint32_t opv, css_style *style,
 			lwc_string *open, *close;
 			lwc_string **temp;
 
-			css__stylesheet_string_get(style->sheet,
-					*((css_code_t *) style->bytecode),
-					&open);
+			css__stylesheet_string_get(style->sheet, *((css_code_t *) style->bytecode), &open);
 			advance_bytecode(style, sizeof(css_code_t));
 
-			css__stylesheet_string_get(style->sheet,
-					*((css_code_t *) style->bytecode),
-					&close);
+			css__stylesheet_string_get(style->sheet, *((css_code_t *) style->bytecode), &close);
 			advance_bytecode(style, sizeof(css_code_t));
 
-			temp = realloc(quotes, 
-					(n_quotes + 2) * sizeof(lwc_string *));
+			temp = state->computed->alloc(quotes, 
+					(n_quotes + 2) * sizeof(lwc_string *), 
+					state->computed->pw);
 			if (temp == NULL) {
 				if (quotes != NULL) {
-					free(quotes);
+					state->computed->alloc(quotes, 0,
+							state->computed->pw);
 				}
 				return CSS_NOMEM;
 			}
@@ -63,9 +61,11 @@ css_error css__cascade_quotes(uint32_t opv, css_style *style,
 	if (n_quotes > 0) {
 		lwc_string **temp;
 
-		temp = realloc(quotes, (n_quotes + 1) * sizeof(lwc_string *));
+		temp = state->computed->alloc(quotes, 
+				(n_quotes + 1) * sizeof(lwc_string *), 
+				state->computed->pw);
 		if (temp == NULL) {
-			free(quotes);
+			state->computed->alloc(quotes, 0, state->computed->pw);
 			return CSS_NOMEM;
 		}
 
@@ -80,12 +80,12 @@ css_error css__cascade_quotes(uint32_t opv, css_style *style,
 
 		error = set_quotes(state->computed, value, quotes);
 		if (error != CSS_OK && quotes != NULL)
-			free(quotes);
+			state->computed->alloc(quotes, 0, state->computed->pw);
 
 		return error;
 	} else {
 		if (quotes != NULL)
-			free(quotes);
+			state->computed->alloc(quotes, 0, state->computed->pw);
 	}
 
 	return CSS_OK;
@@ -105,7 +105,7 @@ css_error css__set_quotes_from_hint(const css_hint *hint,
 	}
 
 	if (error != CSS_OK && hint->data.strings != NULL)
-		free(hint->data.strings);
+		style->alloc(hint->data.strings, 0, style->pw);
 
 	return error;
 }
@@ -145,7 +145,9 @@ css_error css__compose_quotes(const css_computed_style *parent,
 			for (i = quotes; (*i) != NULL; i++)
 				n_quotes++;
 
-			copy = malloc((n_quotes + 1) * sizeof(lwc_string *));
+			copy = result->alloc(NULL, (n_quotes + 1) * 
+					sizeof(lwc_string *),
+					result->pw);
 			if (copy == NULL)
 				return CSS_NOMEM;
 
@@ -155,7 +157,7 @@ css_error css__compose_quotes(const css_computed_style *parent,
 
 		error = set_quotes(result, type, copy);
 		if (error != CSS_OK && copy != NULL)
-			free(copy);
+			result->alloc(copy, 0, result->pw);
 
 		return error;
 	}

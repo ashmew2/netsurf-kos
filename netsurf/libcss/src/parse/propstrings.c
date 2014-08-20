@@ -171,8 +171,6 @@ const stringmap_entry stringmap[LAST_KNOWN] = {
 	{ "outline-style", SLEN("outline-style") },
 	{ "outline-width", SLEN("outline-width") },
 	{ "overflow", SLEN("overflow") },
-	{ "overflow-x", SLEN("overflow-x") },
-	{ "overflow-y", SLEN("overflow-y") },
 	{ "padding", SLEN("padding") },
 	{ "padding-bottom", SLEN("padding-bottom") },
 	{ "padding-left", SLEN("padding-left") },
@@ -212,7 +210,6 @@ const stringmap_entry stringmap[LAST_KNOWN] = {
 	{ "widows", SLEN("widows") },
 	{ "width", SLEN("width") },
 	{ "word-spacing", SLEN("word-spacing") },
-	{ "writing-mode", SLEN("writing-mode") },
 	{ "z-index", SLEN("z-index") },
 
 	{ "inherit", SLEN("inherit") },
@@ -409,9 +406,6 @@ const stringmap_entry stringmap[LAST_KNOWN] = {
 	{ "avoid-page", SLEN("avoid_page") },
 	{ "avoid-column", SLEN("avoid-column") },
 	{ "balance", SLEN("balance") },
-	{ "horizontal-tb", SLEN("horizontal-tb") },
-	{ "vertical-rl", SLEN("vertical-rl") },
-	{ "vertical-lr", SLEN("vertical-lr") },
 
 	{ "aliceblue", SLEN("aliceblue") },
 	{ "antiquewhite", SLEN("antiquewhite") },

@@ -29,6 +29,13 @@ static const char *event_names[] = {
 };
 #endif
 
+static void *myrealloc(void *data, size_t len, void *pw)
+{
+	UNUSED(pw);
+
+	return realloc(data, len);
+}
+
 static css_error event_handler(css_parser_event type, 
 		const parserutils_vector *tokens, void *pw)
 {
@@ -84,7 +91,7 @@ int main(int argc, char **argv)
 
 	for (i = 0; i < ITERATIONS; i++) {
 		assert(css__parser_create("UTF-8", CSS_CHARSET_DICTATED,
-				&parser) == CSS_OK);
+				myrealloc, NULL, &parser) == CSS_OK);
 
 		params.event_handler.handler = event_handler;
 		params.event_handler.pw = NULL;

@@ -93,8 +93,7 @@ PROPERTY_FUNCS(orphans);
 PROPERTY_FUNCS(outline_color);
 PROPERTY_FUNCS(outline_style);
 PROPERTY_FUNCS(outline_width);
-PROPERTY_FUNCS(overflow_x);
-PROPERTY_FUNCS(overflow_y);
+PROPERTY_FUNCS(overflow);
 PROPERTY_FUNCS(padding_top);
 PROPERTY_FUNCS(padding_right);
 PROPERTY_FUNCS(padding_bottom);
@@ -132,7 +131,6 @@ PROPERTY_FUNCS(white_space);
 PROPERTY_FUNCS(widows);
 PROPERTY_FUNCS(width);
 PROPERTY_FUNCS(word_spacing);
-PROPERTY_FUNCS(writing_mode);
 PROPERTY_FUNCS(z_index);
 
 #undef PROPERTY_FUNCS

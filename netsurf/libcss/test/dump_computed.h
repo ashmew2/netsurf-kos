@@ -1918,48 +1918,23 @@ static void dump_computed_style(const css_computed_style *style, char *buf,
 	ptr += wrote;
 	*len -= wrote;
 
-	/* overflow-x */
-	val = css_computed_overflow_x(style);
+	/* overflow */
+	val = css_computed_overflow(style);
 	switch (val) {
 	case CSS_OVERFLOW_INHERIT:
-		wrote = snprintf(ptr, *len, "overflow-x: inherit\n");
+		wrote = snprintf(ptr, *len, "overflow: inherit\n");
 		break;
 	case CSS_OVERFLOW_VISIBLE:
-		wrote = snprintf(ptr, *len, "overflow-x: visible\n");
+		wrote = snprintf(ptr, *len, "overflow: visible\n");
 		break;
 	case CSS_OVERFLOW_HIDDEN:
-		wrote = snprintf(ptr, *len, "overflow-x: hidden\n");
+		wrote = snprintf(ptr, *len, "overflow: hidden\n");
 		break;
 	case CSS_OVERFLOW_SCROLL:
-		wrote = snprintf(ptr, *len, "overflow-x: scroll\n");
+		wrote = snprintf(ptr, *len, "overflow: scroll\n");
 		break;
 	case CSS_OVERFLOW_AUTO:
-		wrote = snprintf(ptr, *len, "overflow-x: auto\n");
-		break;
-	default:
-		wrote = 0;
-		break;
-	}
-	ptr += wrote;
-	*len -= wrote;
-
-	/* overflow-y */
-	val = css_computed_overflow_y(style);
-	switch (val) {
-	case CSS_OVERFLOW_INHERIT:
-		wrote = snprintf(ptr, *len, "overflow-y: inherit\n");
-		break;
-	case CSS_OVERFLOW_VISIBLE:
-		wrote = snprintf(ptr, *len, "overflow-y: visible\n");
-		break;
-	case CSS_OVERFLOW_HIDDEN:
-		wrote = snprintf(ptr, *len, "overflow-y: hidden\n");
-		break;
-	case CSS_OVERFLOW_SCROLL:
-		wrote = snprintf(ptr, *len, "overflow-y: scroll\n");
-		break;
-	case CSS_OVERFLOW_AUTO:
-		wrote = snprintf(ptr, *len, "overflow-y: auto\n");
+		wrote = snprintf(ptr, *len, "overflow: auto\n");
 		break;
 	default:
 		wrote = 0;
@@ -2489,28 +2464,6 @@ static void dump_computed_style(const css_computed_style *style, char *buf,
 		*len -= wrote;
 
 		wrote = snprintf(ptr, *len, "\n");
-		break;
-	default:
-		wrote = 0;
-		break;
-	}
-	ptr += wrote;
-	*len -= wrote;
-
-	/* writing-mode */
-	val = css_computed_writing_mode(style);
-	switch (val) {
-	case CSS_WRITING_MODE_INHERIT:
-		wrote = snprintf(ptr, *len, "writing-mode: inherit\n");
-		break;
-	case CSS_WRITING_MODE_HORIZONTAL_TB:
-		wrote = snprintf(ptr, *len, "writing-mode: horizontal-tb\n");
-		break;
-	case CSS_WRITING_MODE_VERTICAL_RL:
-		wrote = snprintf(ptr, *len, "writing-mode: vertical-rl\n");
-		break;
-	case CSS_WRITING_MODE_VERTICAL_LR:
-		wrote = snprintf(ptr, *len, "writing-mode: vertical-lr\n");
 		break;
 	default:
 		wrote = 0;

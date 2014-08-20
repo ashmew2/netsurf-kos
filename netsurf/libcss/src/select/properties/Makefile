@@ -76,8 +76,7 @@ orphans.o \
 outline_color.o \
 outline_style.o \
 outline_width.o \
-overflow_x.o \
-overflow_y.o \
+overflow.o \
 padding_bottom.o \
 padding_left.o \
 padding_right.o \
@@ -113,9 +112,8 @@ voice_family.o \
 volume.o \
 white_space.o \
 width.o \
-widows.o \
+windows.o \
 word_spacing.o \
-writing_mode.o \
 z_index.o
 
 include $(MENUETDEV)/makefiles/Makefile_for_o_lib

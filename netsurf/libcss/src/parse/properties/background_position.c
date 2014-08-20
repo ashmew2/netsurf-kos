@@ -194,30 +194,12 @@ css_error css__parse_background_position(css_language *c,
 
 	if ((flags & FLAG_INHERIT) == false) {
 		if (value[0] == BACKGROUND_POSITION_HORZ_SET) {
-			error = css__stylesheet_style_append(result, length[0]);
-			if (error != CSS_OK) {
-				*ctx = orig_ctx;
-				return error;
-			}
-
-			error = css__stylesheet_style_append(result, unit[0]);
-			if (error != CSS_OK) {
-				*ctx = orig_ctx;
-				return error;
-			}
+			css__stylesheet_style_append(result, length[0]);
+			css__stylesheet_style_append(result, unit[0]);
 		}
 		if (value[1] == BACKGROUND_POSITION_VERT_SET) {
-			error = css__stylesheet_style_append(result, length[1]);
-			if (error != CSS_OK) {
-				*ctx = orig_ctx;
-				return error;
-			}
-
-			error = css__stylesheet_style_append(result, unit[1]);
-			if (error != CSS_OK) {
-				*ctx = orig_ctx;
-				return error;
-			}
+			css__stylesheet_style_append(result, length[1]);
+			css__stylesheet_style_append(result, unit[1]);
 		}
 	}
 

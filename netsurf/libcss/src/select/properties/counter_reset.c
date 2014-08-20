@@ -37,7 +37,7 @@ css_error css__set_counter_reset_from_hint(const css_hint *hint,
 	}
 
 	if (error != CSS_OK && hint->data.counter != NULL)
-		free(hint->data.counter);
+		style->alloc(hint->data.counter, 0, style->pw);
 
 	return error;
 }
@@ -72,8 +72,9 @@ css_error css__compose_counter_reset(const css_computed_style *parent,
 			for (i = items; i->name != NULL; i++)
 				n_items++;
 
-			copy = malloc((n_items + 1) * 
-					sizeof(css_computed_counter));
+			copy = result->alloc(NULL, (n_items + 1) * 
+					sizeof(css_computed_counter),
+					result->pw);
 			if (copy == NULL)
 				return CSS_NOMEM;
 
@@ -83,7 +84,7 @@ css_error css__compose_counter_reset(const css_computed_style *parent,
 
 		error = set_counter_reset(result, type, copy);
 		if (error != CSS_OK && copy != NULL)
-			free(copy);
+			result->alloc(copy, 0, result->pw);
 
 		return error;
 	}

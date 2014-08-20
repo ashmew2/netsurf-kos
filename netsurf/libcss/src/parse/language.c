@@ -108,30 +108,34 @@ static css_error parseProperty(css_language *c,
  *
  * \param sheet	    The stylesheet object to parse for
  * \param parser    The core parser object to use
+ * \param alloc	    Memory (de)allocation function
+ * \param pw	    Pointer to client-specific private data
  * \param language  Pointer to location to receive parser object
  * \return CSS_OK on success,
  *	   CSS_BADPARM on bad parameters,
  *	   CSS_NOMEM on memory exhaustion
  */
 css_error css__language_create(css_stylesheet *sheet, css_parser *parser,
-		void **language)
+		css_allocator_fn alloc, void *pw, void **language)
 {
 	css_language *c;
 	css_parser_optparams params;
 	parserutils_error perror;
 	css_error error;
 
-	if (sheet == NULL || parser == NULL || language == NULL)
+	if (sheet == NULL || parser == NULL || alloc == NULL || 
+			language == NULL)
 		return CSS_BADPARM;
 
-	c = malloc(sizeof(css_language));
+	c = alloc(NULL, sizeof(css_language), pw);
 	if (c == NULL)
 		return CSS_NOMEM;
 
 	perror = parserutils_stack_create(sizeof(context_entry), 
-			STACK_CHUNK, &c->context);
+			STACK_CHUNK, (parserutils_alloc) alloc, pw, 
+			&c->context);
 	if (perror != PARSERUTILS_OK) {
-		free(c);
+		alloc(c, 0, pw);
 		return css_error_from_parserutils_error(perror);
 	}
 
@@ -140,7 +144,7 @@ css_error css__language_create(css_stylesheet *sheet, css_parser *parser,
 	error = css__parser_setopt(parser, CSS_PARSER_EVENT_HANDLER, &params);
 	if (error != CSS_OK) {
 		parserutils_stack_destroy(c->context);
-		free(c);
+		alloc(c, 0, pw);
 		return error;
 	}
 
@@ -150,6 +154,8 @@ css_error css__language_create(css_stylesheet *sheet, css_parser *parser,
 	c->namespaces = NULL;
 	c->num_namespaces = 0;
 	c->strings = sheet->propstrings;
+	c->alloc = alloc;
+	c->pw = pw;
 
 	*language = c;
 
@@ -178,12 +184,12 @@ css_error css__language_destroy(css_language *language)
 			lwc_string_unref(language->namespaces[i].uri);
 		}
 
-		free(language->namespaces);
+		language->alloc(language->namespaces, 0, language->pw);
 	}
 
 	parserutils_stack_destroy(language->context);
 	
-	free(language);
+	language->alloc(language, 0, language->pw);
 
 	return CSS_OK;
 }
@@ -519,9 +525,6 @@ css_error handleStartAtRule(css_language *c, const parserutils_vector *vector)
 				return error;
 
 			c->state = NAMESPACE_PERMITTED;
-
-			/* Namespaces are special, and do not generate rules */
-			return CSS_OK;
 		} else {
 			return CSS_INVALID;
 		}
@@ -908,9 +911,10 @@ css_error addNamespace(css_language *c, lwc_string *prefix, lwc_string *uri)
 
 		if (idx == c->num_namespaces) {
 			/* Not found, create a new mapping */
-			css_namespace *ns = realloc(c->namespaces, 
+			css_namespace *ns = c->alloc(c->namespaces, 
 					sizeof(css_namespace) * 
-						(c->num_namespaces + 1));
+						(c->num_namespaces + 1), 
+					c->pw);
 
 			if (ns == NULL)
 				return CSS_NOMEM;
@@ -992,11 +996,6 @@ css_error parseClass(css_language *c, const parserutils_vector *vector,
 
 	qname.ns = NULL;
 	qname.name = token->idata;
-
-	/* Ensure lwc insensitive string is available for class names */
-	if (qname.name->insensitive == NULL &&
-			lwc__intern_caseless_string(qname.name) != lwc_error_ok)
-		return CSS_NOMEM;
 
 	return css__stylesheet_selector_detail_init(c->sheet, 
 			CSS_SELECTOR_CLASS, &qname, detail_value,
@@ -1447,13 +1446,6 @@ css_error parsePseudo(css_language *c, const parserutils_vector *vector,
 
 				type = CSS_SELECTOR_ELEMENT;
 
-				/* Ensure lwc insensitive string is available
-				 * for element names */
-				if (qname.name->insensitive == NULL &&
-						lwc__intern_caseless_string(
-						qname.name) != lwc_error_ok)
-					return CSS_NOMEM;
-
 				detail_value.string = NULL;
 				value_type = CSS_SELECTOR_DETAIL_VALUE_STRING;
 			} else {
@@ -1507,12 +1499,6 @@ css_error parseSpecific(css_language *c,
 
 		qname.ns = NULL;
 		qname.name = token->idata;
-
-		/* Ensure lwc insensitive string is available for id names */
-		if (qname.name->insensitive == NULL &&
-				lwc__intern_caseless_string(
-				qname.name) != lwc_error_ok)
-			return CSS_NOMEM;
 
 		error = css__stylesheet_selector_detail_init(c->sheet,
 				CSS_SELECTOR_ID, &qname, detail_value,
@@ -1629,12 +1615,6 @@ css_error parseTypeSelector(css_language *c, const parserutils_vector *vector,
 
 		qname->name = prefix;
 	}
-
-	/* Ensure lwc insensitive string is available for element names */
-	if (qname->name->insensitive == NULL &&
-			lwc__intern_caseless_string(
-			qname->name) != lwc_error_ok)
-		return CSS_NOMEM;
 
 	return CSS_OK;
 }

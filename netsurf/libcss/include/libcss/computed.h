@@ -76,7 +76,8 @@ typedef struct css_computed_content_item {
 	} data;	
 } css_computed_content_item;
   
-css_error css_computed_style_create(css_computed_style **result);
+css_error css_computed_style_create(css_allocator_fn alloc, void *pw,
+		css_computed_style **result);
 css_error css_computed_style_destroy(css_computed_style *style);
 
 css_error css_computed_style_initialise(css_computed_style *style,
@@ -268,9 +269,6 @@ uint8_t css_computed_empty_cells(
 uint8_t css_computed_float(
 		const css_computed_style *style);
   
-uint8_t css_computed_writing_mode(
-		const css_computed_style *style);
-
 uint8_t css_computed_font_style(
 		const css_computed_style *style);
   
@@ -303,13 +301,10 @@ uint8_t css_computed_padding_bottom(
 uint8_t css_computed_padding_left(
 		const css_computed_style *style, 
 		css_fixed *length, css_unit *unit);
-
-uint8_t css_computed_overflow_x(
+  
+uint8_t css_computed_overflow(
 		const css_computed_style *style);
-
-uint8_t css_computed_overflow_y(
-		const css_computed_style *style);
-
+  
 uint8_t css_computed_position(
 		const css_computed_style *style);
   
