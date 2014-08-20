@@ -96,8 +96,6 @@ lwc__intern(const char *s, size_t slen,
                 eret = lwc__initialise();
                 if (eret != lwc_error_ok)
                         return eret;
-                if (ctx == NULL)
-                        return lwc_error_oom;
         }
         
         h = hasher(s, slen);
