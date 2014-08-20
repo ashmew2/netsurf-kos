@@ -7,8 +7,13 @@
  * Copyright 2009 Bo Yang <struggleyb.nku@gmail.com>
  */
 
+
+
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -261,8 +266,8 @@ void *_dom_hash_del(struct dom_hash_table *ht, void *key)
  * \param  c2  Pointer to second context (set to 0 on first call)
  * \return The next hash key, or NULL for no more keys
  */
-void *_dom_hash_iterate(struct dom_hash_table *ht, uintptr_t *c1,
-		uintptr_t **c2)
+void *_dom_hash_iterate(struct dom_hash_table *ht, unsigned long int *c1,
+		unsigned long int **c2)
 {
 	struct _dom_hash_entry **he = (struct _dom_hash_entry **) c2;
 

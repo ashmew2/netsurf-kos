@@ -31,7 +31,7 @@ bool _dom_hash_add(dom_hash_table *ht, void *key, void *value,
 		bool replace);
 void *_dom_hash_get(dom_hash_table *ht, void *key);
 void *_dom_hash_del(dom_hash_table *ht, void *key);
-void *_dom_hash_iterate(dom_hash_table *ht, uintptr_t *c1, uintptr_t **c2);
+void *_dom_hash_iterate(dom_hash_table *ht, unsigned long int *c1, unsigned long int **c2);
 uint32_t _dom_hash_get_length(dom_hash_table *ht);
 
 #endif

@@ -190,13 +190,13 @@ dom_exception dom_html_options_collection_named_item(dom_html_options_collection
 			/* No children and siblings */
 			struct dom_node_internal *parent = n->parent;
 
-			while (n != col->base.root &&
+			while (parent != col->base.root &&
 					n == parent->last_child) {
 				n = parent;
 				parent = parent->parent;
 			}
 			
-			if (n == col->base.root)
+			if (parent == col->base.root)
 				n = NULL;
 			else
 				n = n->next;

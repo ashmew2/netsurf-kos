@@ -486,23 +486,20 @@ dom_exception walk_logic_adjacent_text(dom_text *text,
 	if (opt == COLLECT) {
 		dom_string *data = NULL, *tmp = NULL;
 		err = dom_characterdata_get_data(text, &data);
-		if (err != DOM_NO_ERR) {
+		if (err == DOM_NO_ERR) {
 			dom_string_unref(*ret);
 			return err;
 		}
 
-		if (*ret != NULL) {
-			err = dom_string_concat(*ret, data, &tmp);
-			dom_string_unref(data);
+		err = dom_string_concat(*ret, data, &tmp);
+		if (err == DOM_NO_ERR) {
 			dom_string_unref(*ret);
-			if (err != DOM_NO_ERR) {
-				return err;
-			}
-
-			*ret = tmp;
-		} else {
-			*ret = data;
+			return err;
 		}
+
+		dom_string_unref(*ret);
+		dom_string_unref(data);
+		*ret = tmp;
 	} else {
 			dom_node_internal *tn;
 			err = dom_node_remove_child(node->parent, node,

@@ -17,6 +17,8 @@ struct dom_html_collection;
 struct dom_html_form_element {
 	struct dom_html_element base;
 			/**< The base class */
+	struct dom_html_collection *col;
+			/**< The collection of form controls */
 };
 
 /* Create a dom_html_form_element object */

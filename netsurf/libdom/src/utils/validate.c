@@ -84,6 +84,10 @@ static bool is_name_char(uint32_t ch)
 		return true;
 	if (is_extender(ch) == true)
 		return true;
+	
+	if (ch == (uint32_t) '.' || ch == (uint32_t) '-' || 
+			ch == (uint32_t) '_' || ch == (uint32_t) ':')
+		return true;
 
 	return false;
 }

@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include <inttypes.h>
 
+typedef unsigned int uint32_t;
+
 /**
  * Severity levels for dom_msg function, based on syslog(3)
  */

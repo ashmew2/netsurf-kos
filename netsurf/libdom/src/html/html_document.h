@@ -9,7 +9,6 @@
 #define dom_internal_html_document_h_
 
 #include <dom/html/html_document.h>
-#include <dom/html/html_element.h>
 
 #include "core/document.h"
 
@@ -24,7 +23,6 @@ struct dom_html_document {
 	dom_string *domain;	/**< HTML document domain */
 	dom_string *url;	/**< HTML document URL */
 	dom_string *cookie;	/**< HTML document cookie */
-	dom_html_element *body;	/**< HTML BodyElement */
 	
 	/** Cached strings for html objects to use */
 	dom_string **memoised;
@@ -128,11 +126,6 @@ dom_exception _dom_html_document_create_attribute(dom_document *doc,
 dom_exception _dom_html_document_create_attribute_ns(dom_document *doc,
 		dom_string *namespace, dom_string *qname,
 		dom_attr **result);
-bool images_callback(struct dom_node_internal *node, void *ctx);
-bool applets_callback(struct dom_node_internal *node, void *ctx);
-bool applet_callback(struct dom_node_internal *node, void *ctx);
-bool links_callback(struct dom_node_internal *node, void *ctx);
-bool anchors_callback(struct dom_node_internal *node, void *ctx);
 
 #define DOM_DOCUMENT_VTABLE_HTML \
 	_dom_document_get_doctype, \
