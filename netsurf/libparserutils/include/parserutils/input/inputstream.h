@@ -48,6 +48,7 @@ typedef struct parserutils_inputstream
 /* Create an input stream */
 parserutils_error parserutils_inputstream_create(const char *enc,
 		uint32_t encsrc, parserutils_charset_detect_func csdetect,
+		parserutils_alloc alloc, void *pw, 
 		parserutils_inputstream **stream);
 /* Destroy an input stream */
 parserutils_error parserutils_inputstream_destroy(
@@ -139,6 +140,9 @@ static inline parserutils_error parserutils_inputstream_peek(
 
 #undef IS_ASCII
 
+	if (off != utf8_len && error != PARSERUTILS_NEEDDATA)
+		abort();
+
 	return parserutils_inputstream_peek_slow(stream, offset, ptr, length);
 }
 
@@ -160,7 +164,7 @@ static inline void parserutils_inputstream_advance(
 #endif
 
 	if (bytes > stream->utf8->length - stream->cursor)
-		bytes = stream->utf8->length - stream->cursor;
+		abort();
 
 	if (stream->cursor == stream->utf8->length)
 		return;

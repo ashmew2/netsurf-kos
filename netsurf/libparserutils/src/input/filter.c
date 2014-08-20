@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define WITHOUT_ICONV_FILTER
 #ifndef WITHOUT_ICONV_FILTER
 #include <iconv.h>
 #endif
@@ -39,6 +40,9 @@ struct parserutils_filter {
 	struct {
 		uint16_t encoding;	/**< Input encoding */
 	} settings;			/**< Filter settings */
+
+	parserutils_alloc alloc;	/**< Memory (de)allocation function */
+	void *pw;			/**< Client private data */
 };
 
 static parserutils_error filter_set_defaults(parserutils_filter *input);
@@ -49,6 +53,8 @@ static parserutils_error filter_set_encoding(parserutils_filter *input,
  * Create an input filter
  *
  * \param int_enc  Desired encoding of document
+ * \param alloc    Function used to (de)allocate data
+ * \param pw       Pointer to client-specific private data (may be NULL)
  * \param filter   Pointer to location to receive filter instance
  * \return PARSERUTILS_OK on success,
  *         PARSERUTILS_BADPARM on bad parameters,
@@ -56,15 +62,15 @@ static parserutils_error filter_set_encoding(parserutils_filter *input,
  *         PARSERUTILS_BADENCODING if the encoding is unsupported
  */
 parserutils_error parserutils__filter_create(const char *int_enc,
-		parserutils_filter **filter)
+		parserutils_alloc alloc, void *pw, parserutils_filter **filter)
 {
 	parserutils_filter *f;
 	parserutils_error error;
 
-	if (int_enc == NULL || filter == NULL)
+	if (int_enc == NULL || alloc == NULL || filter == NULL)
 		return PARSERUTILS_BADPARM;
 
-	f = malloc(sizeof(parserutils_filter));
+	f = alloc(NULL, sizeof(parserutils_filter), pw);
 	if (f == NULL)
 		return PARSERUTILS_NOMEM;
 
@@ -73,7 +79,7 @@ parserutils_error parserutils__filter_create(const char *int_enc,
 	f->int_enc = parserutils_charset_mibenum_from_name(
 			int_enc, strlen(int_enc));
 	if (f->int_enc == 0) {
-		free(f);
+		alloc(f, 0, pw);
 		return PARSERUTILS_BADENCODING;
 	}
 #else
@@ -82,20 +88,24 @@ parserutils_error parserutils__filter_create(const char *int_enc,
 	f->pivot_len = 0;
 #endif
 
+	f->alloc = alloc;
+	f->pw = pw;
+
 	error = filter_set_defaults(f);
 	if (error != PARSERUTILS_OK) {
-		free(f);
+		f->alloc(f, 0, pw);
 		return error;
 	}
 
 #ifdef WITHOUT_ICONV_FILTER
-	error = parserutils_charset_codec_create(int_enc, &f->write_codec);
+	error = parserutils_charset_codec_create(int_enc, alloc, pw, 
+			&f->write_codec);
 	if (error != PARSERUTILS_OK) {
 		if (f->read_codec != NULL) {
 			parserutils_charset_codec_destroy(f->read_codec);
 			f->read_codec = NULL;
 		}
-		free(f);
+		f->alloc(f, 0, pw);
 		return error;
 	}
 #endif
@@ -133,7 +143,7 @@ parserutils_error parserutils__filter_destroy(parserutils_filter *input)
 	}
 #endif
 
-	free(input);
+	input->alloc(input, 0, input->pw);
 
 	return PARSERUTILS_OK;
 }
@@ -396,7 +406,8 @@ parserutils_error filter_set_encoding(parserutils_filter *input,
 		input->read_codec = NULL;
 	}
 
-	error = parserutils_charset_codec_create(enc, &input->read_codec);
+	error = parserutils_charset_codec_create(enc, input->alloc,
+			input->pw, &input->read_codec);
 	if (error != PARSERUTILS_OK)
 		return error;
 #endif

@@ -11,6 +11,7 @@
 /** \file
  * UTF-8 manipulation macros (implementation).
  */
+#include <stdint.h>
 
 #include <stdbool.h>
 #include <stdlib.h>

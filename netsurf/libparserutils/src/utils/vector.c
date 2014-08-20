@@ -20,6 +20,9 @@ struct parserutils_vector
 	size_t items_allocated;		/**< Number of slots allocated */
 	int32_t current_item;		/**< Index of current item */
 	void *items;			/**< Items in vector */
+
+	parserutils_alloc alloc;	/**< Memory (de)allocation function */
+	void *pw;			/**< Client-specific data */
 };
 
 /**
@@ -27,26 +30,30 @@ struct parserutils_vector
  *
  * \param item_size   Length, in bytes, of an item in the vector
  * \param chunk_size  Number of vector slots in a chunk
+ * \param alloc       Memory (de)allocation function
+ * \param pw          Pointer to client-specific private data
  * \param vector      Pointer to location to receive vector instance
  * \return PARSERUTILS_OK on success,
  *         PARSERUTILS_BADPARM on bad parameters,
  *         PARSERUTILS_NOMEM on memory exhaustion
  */
 parserutils_error parserutils_vector_create(size_t item_size, 
-		size_t chunk_size, parserutils_vector **vector)
+		size_t chunk_size, parserutils_alloc alloc, void *pw,
+		parserutils_vector **vector)
 {
 	parserutils_vector *v;
 
-	if (item_size == 0 || chunk_size == 0 || vector == NULL)
+	if (item_size == 0 || chunk_size == 0 || alloc == NULL || 
+			vector == NULL)
 		return PARSERUTILS_BADPARM;
 
-	v = malloc(sizeof(parserutils_vector));
+	v = alloc(NULL, sizeof(parserutils_vector), pw);
 	if (v == NULL)
 		return PARSERUTILS_NOMEM;
 
-	v->items = malloc(item_size * chunk_size);
+	v->items = alloc(NULL, item_size * chunk_size, pw);
 	if (v->items == NULL) {
-		free(v);
+		alloc(v, 0, pw);
 		return PARSERUTILS_NOMEM;
 	}
 
@@ -54,6 +61,9 @@ parserutils_error parserutils_vector_create(size_t item_size,
 	v->chunk_size = chunk_size;
 	v->items_allocated = chunk_size;
 	v->current_item = -1;
+
+	v->alloc = alloc;
+	v->pw = pw;
 
 	*vector = v;
 
@@ -71,8 +81,8 @@ parserutils_error parserutils_vector_destroy(parserutils_vector *vector)
 	if (vector == NULL)
 		return PARSERUTILS_BADPARM;
 
-	free(vector->items);
-	free(vector);
+	vector->alloc(vector->items, 0, vector->pw);
+	vector->alloc(vector, 0, vector->pw);
 
 	return PARSERUTILS_OK;
 }
@@ -99,9 +109,9 @@ parserutils_error parserutils_vector_append(parserutils_vector *vector,
 	slot = vector->current_item + 1;
 
 	if ((size_t) slot >= vector->items_allocated) {
-		void *temp = realloc(vector->items,
+		void *temp = vector->alloc(vector->items,
 				(vector->items_allocated + vector->chunk_size) *
-				vector->item_size);
+				vector->item_size, vector->pw);
 		if (temp == NULL)
 			return PARSERUTILS_NOMEM;
 

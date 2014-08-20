@@ -21,10 +21,14 @@ struct parserutils_buffer
 	uint8_t *data;
 	size_t length;
 	size_t allocated;
+
+	parserutils_alloc alloc;
+	void *pw;
 };
 typedef struct parserutils_buffer parserutils_buffer;
 
-parserutils_error parserutils_buffer_create(parserutils_buffer **buffer);
+parserutils_error parserutils_buffer_create(parserutils_alloc alloc, 
+		void *pw, parserutils_buffer **buffer);
 parserutils_error parserutils_buffer_destroy(parserutils_buffer *buffer);
 
 parserutils_error parserutils_buffer_append(parserutils_buffer *buffer, 

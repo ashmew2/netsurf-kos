@@ -36,7 +36,7 @@ typedef union parserutils_filter_optparams {
 
 /* Create an input filter */
 parserutils_error parserutils__filter_create(const char *int_enc,
-		parserutils_filter **filter);
+		parserutils_alloc alloc, void *pw, parserutils_filter **filter);
 /* Destroy an input filter */
 parserutils_error parserutils__filter_destroy(parserutils_filter *input);
 

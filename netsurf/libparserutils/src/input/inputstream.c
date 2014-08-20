@@ -33,6 +33,9 @@ typedef struct parserutils_inputstream_private {
 	parserutils_filter *input;	/**< Charset conversion filter */
 
 	parserutils_charset_detect_func csdetect; /**< Charset detection func.*/
+
+	parserutils_alloc alloc;	/**< Memory (de)allocation function */
+	void *pw;			/**< Client private data */
 } parserutils_inputstream_private;
 
 static inline parserutils_error parserutils_inputstream_refill_buffer(
@@ -46,6 +49,8 @@ static inline parserutils_error parserutils_inputstream_strip_bom(
  * \param enc       Document charset, or NULL to autodetect
  * \param encsrc    Value for encoding source, if specified, or 0
  * \param csdetect  Charset detection function, or NULL
+ * \param alloc     Memory (de)allocation function
+ * \param pw        Pointer to client-specific private data (may be NULL)
  * \param stream    Pointer to location to receive stream instance
  * \return PARSERUTILS_OK on success,
  *         PARSERUTILS_BADPARM on bad parameters,
@@ -58,28 +63,29 @@ static inline parserutils_error parserutils_inputstream_strip_bom(
  */
 parserutils_error parserutils_inputstream_create(const char *enc,
 		uint32_t encsrc, parserutils_charset_detect_func csdetect,
+		parserutils_alloc alloc, void *pw,
 		parserutils_inputstream **stream)
 {
 	parserutils_inputstream_private *s;
 	parserutils_error error;
 
-	if (stream == NULL)
+	if (alloc == NULL || stream == NULL)
 		return PARSERUTILS_BADPARM;
 
-	s = malloc(sizeof(parserutils_inputstream_private));
+	s = alloc(NULL, sizeof(parserutils_inputstream_private), pw);
 	if (s == NULL)
 		return PARSERUTILS_NOMEM;
 
-	error = parserutils_buffer_create(&s->raw);
+	error = parserutils_buffer_create(alloc, pw, &s->raw);
 	if (error != PARSERUTILS_OK) {
-		free(s);
+		alloc(s, 0, pw);
 		return error;
 	}
 
-	error = parserutils_buffer_create(&s->public.utf8);
+	error = parserutils_buffer_create(alloc, pw, &s->public.utf8);
 	if (error != PARSERUTILS_OK) {
 		parserutils_buffer_destroy(s->raw);
-		free(s);
+		alloc(s, 0, pw);
 		return error;
 	}
 
@@ -87,11 +93,11 @@ parserutils_error parserutils_inputstream_create(const char *enc,
 	s->public.had_eof = false;
 	s->done_first_chunk = false;
 
-	error = parserutils__filter_create("UTF-8", &s->input);
+	error = parserutils__filter_create("UTF-8", alloc, pw, &s->input);
 	if (error != PARSERUTILS_OK) {
 		parserutils_buffer_destroy(s->public.utf8);
 		parserutils_buffer_destroy(s->raw);
-		free(s);
+		alloc(s, 0, pw);
 		return error;
 	}
 
@@ -101,13 +107,8 @@ parserutils_error parserutils_inputstream_create(const char *enc,
 		s->mibenum = 
 			parserutils_charset_mibenum_from_name(enc, strlen(enc));
 
-		if (s->mibenum == 0) {
-			parserutils__filter_destroy(s->input);
-			parserutils_buffer_destroy(s->public.utf8);
-			parserutils_buffer_destroy(s->raw);
-			free(s);
+		if (s->mibenum == 0)
 			return PARSERUTILS_BADENCODING;
-		}
 
 		params.encoding.name = enc;
 
@@ -118,7 +119,7 @@ parserutils_error parserutils_inputstream_create(const char *enc,
 			parserutils__filter_destroy(s->input);
 			parserutils_buffer_destroy(s->public.utf8);
 			parserutils_buffer_destroy(s->raw);
-			free(s);
+			alloc(s, 0, pw);
 			return error;
 		}
 
@@ -129,6 +130,9 @@ parserutils_error parserutils_inputstream_create(const char *enc,
 	}
 
 	s->csdetect = csdetect;
+
+	s->alloc = alloc;
+	s->pw = pw;
 
 	*stream = (parserutils_inputstream *) s;
 
@@ -153,7 +157,7 @@ parserutils_error parserutils_inputstream_destroy(
 	parserutils__filter_destroy(s->input);
 	parserutils_buffer_destroy(s->public.utf8);
 	parserutils_buffer_destroy(s->raw);
-	free(s);
+	s->alloc(s, 0, s->pw);
 
 	return PARSERUTILS_OK;
 }
@@ -412,7 +416,8 @@ parserutils_error parserutils_inputstream_refill_buffer(
 			stream->encsrc = 0;
 		}
 
-		assert(stream->mibenum != 0);
+		if (stream->mibenum == 0)
+			abort();
 
 		/* Strip any BOM, and update encoding as appropriate */
 		error = parserutils_inputstream_strip_bom(&stream->mibenum, 

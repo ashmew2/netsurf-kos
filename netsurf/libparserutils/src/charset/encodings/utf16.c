@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+
 #include <parserutils/charset/utf16.h>
 
 /**

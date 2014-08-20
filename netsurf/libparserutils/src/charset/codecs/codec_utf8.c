@@ -5,7 +5,6 @@
  * Copyright 2007 John-Mark Bell <jmb@netsurf-browser.org>
  */
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -44,6 +43,7 @@ typedef struct charset_utf8_codec {
 
 static bool charset_utf8_codec_handles_charset(const char *charset);
 static parserutils_error charset_utf8_codec_create(const char *charset,
+		parserutils_alloc alloc, void *pw,
 		parserutils_charset_codec **codec);
 static parserutils_error charset_utf8_codec_destroy(
 		parserutils_charset_codec *codec);
@@ -83,19 +83,22 @@ bool charset_utf8_codec_handles_charset(const char *charset)
  * Create a UTF-8 codec
  *
  * \param charset  The charset to read from / write to
+ * \param alloc    Memory (de)allocation function
+ * \param pw       Pointer to client-specific private data (may be NULL)
  * \param codec    Pointer to location to receive codec
  * \return PARSERUTILS_OK on success,
  *         PARSERUTILS_BADPARM on bad parameters,
  *         PARSERUTILS_NOMEM on memory exhausion
  */
 parserutils_error charset_utf8_codec_create(const char *charset,
+		parserutils_alloc alloc, void *pw,
 		parserutils_charset_codec **codec)
 {
 	charset_utf8_codec *c;
 
 	UNUSED(charset);
 
-	c = malloc(sizeof(charset_utf8_codec));
+	c = alloc(NULL, sizeof(charset_utf8_codec), pw);
 	if (c == NULL)
 		return PARSERUTILS_NOMEM;
 
@@ -177,7 +180,8 @@ parserutils_error charset_utf8_codec_encode(parserutils_charset_codec *codec,
 			UTF8_FROM_UCS4(pwrite[0], dest, destlen, error);
 			if (error != PARSERUTILS_OK) {
 				uint32_t len;
-				assert(error == PARSERUTILS_NOMEM);
+				if (error != PARSERUTILS_NOMEM)
+					abort();
 
 				/* Insufficient output buffer space */
 				for (len = 0; len < c->write_len; len++) {
@@ -203,10 +207,12 @@ parserutils_error charset_utf8_codec_encode(parserutils_charset_codec *codec,
 			UTF8_FROM_UCS4(towrite[0], dest, destlen, error);
 			if (error != PARSERUTILS_OK) {
 				uint32_t len;
-				assert(error == PARSERUTILS_NOMEM);
+				if (error != PARSERUTILS_NOMEM)
+					abort();
 
 				/* Insufficient output space */
-				assert(towritelen < WRITE_BUFSIZE);
+				if (towritelen >= WRITE_BUFSIZE)
+					abort();
 
 				c->write_len = towritelen;
 
@@ -335,7 +341,8 @@ parserutils_error charset_utf8_codec_decode(parserutils_charset_codec *codec,
 		/* Failed to resolve an incomplete character and
 		 * ran out of buffer space. No recovery strategy
 		 * possible, so explode everywhere. */
-		assert((orig_l + ol) - l != 0);
+		if ((orig_l + ol) - l == 0)
+			abort();
 
 		/* Report memory exhaustion case from above */
 		if (error != PARSERUTILS_OK)
@@ -438,7 +445,8 @@ parserutils_error charset_utf8_codec_read_char(charset_utf8_codec *c,
 		return error;
 	} else if (error == PARSERUTILS_NEEDDATA) {
 		/* Incomplete input sequence */
-		assert(*sourcelen < INVAL_BUFSIZE);
+		if (*sourcelen > INVAL_BUFSIZE)
+			abort();
 
 		memmove(c->inval_buf, *source, *sourcelen);
 		c->inval_buf[*sourcelen] = '\0';
@@ -476,7 +484,8 @@ parserutils_error charset_utf8_codec_read_char(charset_utf8_codec *c,
 		if (error != PARSERUTILS_OK) {
 			if (error == PARSERUTILS_NEEDDATA) {
 				/* Need more data to be sure */
-				assert(*sourcelen < INVAL_BUFSIZE);
+				if (*sourcelen > INVAL_BUFSIZE)
+					abort();
 
 				memmove(c->inval_buf, *source, *sourcelen);
 				c->inval_buf[*sourcelen] = '\0';

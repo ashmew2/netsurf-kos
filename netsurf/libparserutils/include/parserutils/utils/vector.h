@@ -22,7 +22,8 @@ struct parserutils_vector;
 typedef struct parserutils_vector parserutils_vector;
 
 parserutils_error parserutils_vector_create(size_t item_size, 
-		size_t chunk_size, parserutils_vector **vector);
+		size_t chunk_size, parserutils_alloc alloc, void *pw,
+		parserutils_vector **vector);
 parserutils_error parserutils_vector_destroy(parserutils_vector *vector);
 
 parserutils_error parserutils_vector_append(parserutils_vector *vector, 

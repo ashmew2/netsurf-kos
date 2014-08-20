@@ -64,6 +64,7 @@ typedef struct charset_8859_codec {
 
 static bool charset_8859_codec_handles_charset(const char *charset);
 static parserutils_error charset_8859_codec_create(const char *charset,
+		parserutils_alloc alloc, void *pw,
 		parserutils_charset_codec **codec);
 static parserutils_error charset_8859_codec_destroy(
 		parserutils_charset_codec *codec);
@@ -122,12 +123,15 @@ bool charset_8859_codec_handles_charset(const char *charset)
  * Create an ISO-8859-n codec
  *
  * \param charset  The charset to read from / write to
+ * \param alloc    Memory (de)allocation function
+ * \param pw       Pointer to client-specific private data (may be NULL)
  * \param codec    Pointer to location to receive codec
  * \return PARSERUTILS_OK on success,
  *         PARSERUTILS_BADPARM on bad parameters,
  *         PARSERUTILS_NOMEM on memory exhausion
  */
 parserutils_error charset_8859_codec_create(const char *charset,
+		parserutils_alloc alloc, void *pw,
 		parserutils_charset_codec **codec)
 {
 	uint32_t i;
@@ -145,7 +149,7 @@ parserutils_error charset_8859_codec_create(const char *charset,
 
 	assert(table != NULL);
 
-	c = malloc(sizeof(charset_8859_codec));
+	c = alloc(NULL, sizeof(charset_8859_codec), pw);
 	if (c == NULL)
 		return PARSERUTILS_NOMEM;
 
@@ -258,7 +262,8 @@ parserutils_error charset_8859_codec_encode(parserutils_charset_codec *codec,
 				}
 
 				/* Insufficient output space */
-				assert(towritelen < WRITE_BUFSIZE);
+				if (towritelen >= WRITE_BUFSIZE)
+					abort();
 
 				c->write_len = towritelen;
 

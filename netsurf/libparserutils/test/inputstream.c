@@ -14,6 +14,13 @@ const char * const __dynamic_da_name = "InputStream";
 int __dynamic_da_max_size = 128*1024*1024;
 #endif
 
+static void *myrealloc(void *ptr, size_t len, void *pw)
+{
+	UNUSED(pw);
+
+	return realloc(ptr, len);
+}
+
 int main(int argc, char **argv)
 {
 	parserutils_inputstream *stream;
@@ -30,7 +37,7 @@ int main(int argc, char **argv)
 	}
 
 	assert(parserutils_inputstream_create("UTF-8", 1, NULL,
-			&stream) == PARSERUTILS_OK);
+			myrealloc, NULL, &stream) == PARSERUTILS_OK);
 
 	fp = fopen(argv[1], "rb");
 	if (fp == NULL) {

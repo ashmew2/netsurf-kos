@@ -8,10 +8,9 @@
 /** \file
  * UTF-8 manipulation functions (implementation).
  */
-
+#include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 
 #include <parserutils/charset/utf8.h>
