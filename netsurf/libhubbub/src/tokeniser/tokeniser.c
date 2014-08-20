@@ -8,7 +8,17 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
-#include <stdint.h>
+
+#include <inttypes.h>
+
+typedef signed char int8_t;
+typedef signed short int16_t;
+typedef signed int int32_t;
+
+typedef unsigned char uint8_t;
+typedef unsigned short uint16_t;
+typedef unsigned int uint32_t;
+
 #include <stdio.h>
 
 #include <parserutils/charset/utf8.h>
@@ -181,6 +191,9 @@ struct hubbub_tokeniser {
 
 	hubbub_error_handler error_handler;	/**< Error handling callback */
 	void *error_pw;				/**< Error handler data */
+
+	hubbub_allocator_fn alloc;	/**< Memory (de)allocation function */
+	void *alloc_pw;			/**< Client private data */
 };
 
 static hubbub_error hubbub_tokeniser_handle_data(hubbub_tokeniser *tokeniser);
@@ -277,34 +290,37 @@ static hubbub_error hubbub_tokeniser_emit_token(hubbub_tokeniser *tokeniser,
  * Create a hubbub tokeniser
  *
  * \param input      Input stream instance
+ * \param alloc      Memory (de)allocation function
+ * \param pw         Pointer to client-specific private data (may be NULL)
  * \param tokeniser  Pointer to location to receive tokeniser instance
  * \return HUBBUB_OK on success,
  *         HUBBUB_BADPARM on bad parameters,
  *         HUBBUB_NOMEM on memory exhaustion
  */
 hubbub_error hubbub_tokeniser_create(parserutils_inputstream *input,
+		hubbub_allocator_fn alloc, void *pw, 
 		hubbub_tokeniser **tokeniser)
 {
 	parserutils_error perror;
 	hubbub_tokeniser *tok;
 
-	if (input == NULL || tokeniser == NULL)
+	if (input == NULL || alloc == NULL || tokeniser == NULL)
 		return HUBBUB_BADPARM;
 
-	tok = malloc(sizeof(hubbub_tokeniser));
+	tok = alloc(NULL, sizeof(hubbub_tokeniser), pw);
 	if (tok == NULL)
 		return HUBBUB_NOMEM;
 
-	perror = parserutils_buffer_create(&tok->buffer);
+	perror = parserutils_buffer_create(alloc, pw, &tok->buffer);
 	if (perror != PARSERUTILS_OK) {
-		free(tok);
+		alloc(tok, 0, pw);
 		return hubbub_error_from_parserutils_error(perror);
 	}
 
-	perror = parserutils_buffer_create(&tok->insert_buf);
+	perror = parserutils_buffer_create(alloc, pw, &tok->insert_buf);
 	if (perror != PARSERUTILS_OK) {
 		parserutils_buffer_destroy(tok->buffer);
-		free(tok);
+		alloc(tok, 0, pw);
 		return hubbub_error_from_parserutils_error(perror);
 	}
 
@@ -323,6 +339,9 @@ hubbub_error hubbub_tokeniser_create(parserutils_inputstream *input,
 
 	tok->error_handler = NULL;
 	tok->error_pw = NULL;
+
+	tok->alloc = alloc;
+	tok->alloc_pw = pw;
 
 	memset(&tok->context, 0, sizeof(hubbub_tokeniser_context));
 
@@ -343,14 +362,15 @@ hubbub_error hubbub_tokeniser_destroy(hubbub_tokeniser *tokeniser)
 		return HUBBUB_BADPARM;
 
 	if (tokeniser->context.current_tag.attributes != NULL) {
-		free(tokeniser->context.current_tag.attributes);
+		tokeniser->alloc(tokeniser->context.current_tag.attributes,
+				0, tokeniser->alloc_pw);
 	}
 
 	parserutils_buffer_destroy(tokeniser->insert_buf);
 
 	parserutils_buffer_destroy(tokeniser->buffer);
 
-	free(tokeniser);
+	tokeniser->alloc(tokeniser, 0, tokeniser->alloc_pw);
 
 	return HUBBUB_OK;
 }
@@ -1192,9 +1212,10 @@ hubbub_error hubbub_tokeniser_handle_before_attribute_name(
 			/** \todo parse error */
 		}
 
-		attr = realloc(ctag->attributes,
+		attr = tokeniser->alloc(ctag->attributes,
 				(ctag->n_attributes + 1) *
-					sizeof(hubbub_attribute));
+					sizeof(hubbub_attribute),
+				tokeniser->alloc_pw);
 		if (attr == NULL)
 			return HUBBUB_NOMEM;
 
@@ -1323,9 +1344,10 @@ hubbub_error hubbub_tokeniser_handle_after_attribute_name(
 			/** \todo parse error */
 		}
 
-		attr = realloc(ctag->attributes,
+		attr = tokeniser->alloc(ctag->attributes,
 				(ctag->n_attributes + 1) *
-					sizeof(hubbub_attribute));
+					sizeof(hubbub_attribute),
+				tokeniser->alloc_pw);
 		if (attr == NULL)
 			return HUBBUB_NOMEM;
 

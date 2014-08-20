@@ -25,6 +25,9 @@ struct hubbub_parser {
 	parserutils_inputstream *stream;	/**< Input stream instance */
 	hubbub_tokeniser *tok;		/**< Tokeniser instance */
 	hubbub_treebuilder *tb;		/**< Treebuilder instance */
+
+	hubbub_allocator_fn alloc;	/**< Memory (de)allocation function */
+	void *pw;			/**< Client data */
 };
 
 /**
@@ -32,6 +35,8 @@ struct hubbub_parser {
  *
  * \param enc      Source document encoding, or NULL to autodetect
  * \param fix_enc  Permit fixing up of encoding if it's frequently misused
+ * \param alloc    Memory (de)allocation function
+ * \param pw       Pointer to client-specific private data (may be NULL)
  * \param parser   Pointer to location to receive parser instance
  * \return HUBBUB_OK on success,
  *         HUBBUB_BADPARM on bad parameters,
@@ -39,16 +44,16 @@ struct hubbub_parser {
  *         HUBBUB_BADENCODING if ::enc is unsupported
  */
 hubbub_error hubbub_parser_create(const char *enc, bool fix_enc,
-		hubbub_parser **parser)
+		hubbub_allocator_fn alloc, void *pw, hubbub_parser **parser)
 {
 	parserutils_error perror;
 	hubbub_error error;
 	hubbub_parser *p;
 
-	if (parser == NULL)
+	if (alloc == NULL || parser == NULL)
 		return HUBBUB_BADPARM;
 
-	p = malloc(sizeof(hubbub_parser));
+	p = alloc(NULL, sizeof(hubbub_parser), pw);
 	if (p == NULL)
 		return HUBBUB_NOMEM;
 
@@ -67,26 +72,29 @@ hubbub_error hubbub_parser_create(const char *enc, bool fix_enc,
 
 	perror = parserutils_inputstream_create(enc,
 		enc != NULL ? HUBBUB_CHARSET_CONFIDENT : HUBBUB_CHARSET_UNKNOWN,
-		hubbub_charset_extract, &p->stream);
+		hubbub_charset_extract, alloc, pw, &p->stream);
 	if (perror != PARSERUTILS_OK) {
-		free(p);
+		alloc(p, 0, pw);
 		return hubbub_error_from_parserutils_error(perror);
 	}
 
-	error = hubbub_tokeniser_create(p->stream, &p->tok);
+	error = hubbub_tokeniser_create(p->stream, alloc, pw, &p->tok);
 	if (error != HUBBUB_OK) {
 		parserutils_inputstream_destroy(p->stream);
-		free(p);
+		alloc(p, 0, pw);
 		return error;
 	}
 
-	error = hubbub_treebuilder_create(p->tok, &p->tb);
+	error = hubbub_treebuilder_create(p->tok, alloc, pw, &p->tb);
 	if (error != HUBBUB_OK) {
 		hubbub_tokeniser_destroy(p->tok);
 		parserutils_inputstream_destroy(p->stream);
-		free(p);
+		alloc(p, 0, pw);
 		return error;
 	}
+
+	p->alloc = alloc;
+	p->pw = pw;
 
 	*parser = p;
 
@@ -110,7 +118,7 @@ hubbub_error hubbub_parser_destroy(hubbub_parser *parser)
 
 	parserutils_inputstream_destroy(parser->stream);
 
-	free(parser);
+	parser->alloc(parser, 0, parser->pw);
 
 	return HUBBUB_OK;
 }

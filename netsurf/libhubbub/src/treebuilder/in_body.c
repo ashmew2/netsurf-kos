@@ -1162,8 +1162,10 @@ hubbub_error process_isindex_in_body(hubbub_treebuilder *treebuilder,
 	/* First up, clone the token's attributes */
 	if (token->data.tag.n_attributes > 0) {
 		uint32_t i;
-		attrs = malloc((token->data.tag.n_attributes + 1) *
-						sizeof(hubbub_attribute));
+		attrs = treebuilder->alloc(NULL,
+				(token->data.tag.n_attributes + 1) *
+						sizeof(hubbub_attribute),
+		       		treebuilder->alloc_pw);
 		if (attrs == NULL)
 			return HUBBUB_NOMEM;
 
@@ -1207,7 +1209,7 @@ hubbub_error process_isindex_in_body(hubbub_treebuilder *treebuilder,
 
 	err = process_form_in_body(treebuilder, &dummy);
 	if (err != HUBBUB_OK) {
-		free(attrs);
+		treebuilder->alloc(attrs, 0, treebuilder->alloc_pw);
 		return err;
 	}
 
@@ -1219,7 +1221,7 @@ hubbub_error process_isindex_in_body(hubbub_treebuilder *treebuilder,
 
 	err = process_hr_in_body(treebuilder, &dummy);
 	if (err != HUBBUB_OK) {
-		free(attrs);
+		treebuilder->alloc(attrs, 0, treebuilder->alloc_pw);
 		return err;
 	}
 
@@ -1231,7 +1233,7 @@ hubbub_error process_isindex_in_body(hubbub_treebuilder *treebuilder,
 
 	err = process_container_in_body(treebuilder, &dummy);
 	if (err != HUBBUB_OK) {
-		free(attrs);
+		treebuilder->alloc(attrs, 0, treebuilder->alloc_pw);
 		return err;
 	}
 
@@ -1243,7 +1245,7 @@ hubbub_error process_isindex_in_body(hubbub_treebuilder *treebuilder,
 
 	err = process_phrasing_in_body(treebuilder, &dummy);
 	if (err != HUBBUB_OK) {
-		free(attrs);
+		treebuilder->alloc(attrs, 0, treebuilder->alloc_pw);
 		return err;
 	}
 
@@ -1261,7 +1263,7 @@ hubbub_error process_isindex_in_body(hubbub_treebuilder *treebuilder,
 	
 	err = process_character(treebuilder, &dummy);
 	if (err != HUBBUB_OK) {
-		free(attrs);
+		treebuilder->alloc(attrs, 0, treebuilder->alloc_pw);
 		return err;
 	}
 
@@ -1276,18 +1278,18 @@ hubbub_error process_isindex_in_body(hubbub_treebuilder *treebuilder,
 
 	err = reconstruct_active_formatting_list(treebuilder);
 	if (err != HUBBUB_OK) {
-		free(attrs);
+		treebuilder->alloc(attrs, 0, treebuilder->alloc_pw);
 		return err;
 	}
 
 	err = insert_element(treebuilder, &dummy.data.tag, false);
 	if (err != HUBBUB_OK) {
-		free(attrs);
+		treebuilder->alloc(attrs, 0, treebuilder->alloc_pw);
 		return err;
 	}
 
 	/* No longer need attrs */
-	free(attrs);
+	treebuilder->alloc(attrs, 0, treebuilder->alloc_pw);
 
 	treebuilder->context.frameset_ok = false;
 

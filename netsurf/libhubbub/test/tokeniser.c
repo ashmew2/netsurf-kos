@@ -13,13 +13,20 @@
 
 static hubbub_error token_handler(const hubbub_token *token, void *pw);
 
+static void *myrealloc(void *ptr, size_t len, void *pw)
+{
+	UNUSED(pw);
+
+	return realloc(ptr, len);
+}
+
 int main(int argc, char **argv)
 {
 	parserutils_inputstream *stream;
 	hubbub_tokeniser *tok;
 	hubbub_tokeniser_optparams params;
 	FILE *fp;
-	size_t len;
+	size_t len, origlen;
 #define CHUNK_SIZE (4096)
 	uint8_t buf[CHUNK_SIZE];
 
@@ -29,9 +36,10 @@ int main(int argc, char **argv)
 	}
 
 	assert(parserutils_inputstream_create("UTF-8", 0, NULL,
-			&stream) == PARSERUTILS_OK);
+			myrealloc, NULL, &stream) == PARSERUTILS_OK);
 
-	assert(hubbub_tokeniser_create(stream, &tok) == HUBBUB_OK);
+	assert(hubbub_tokeniser_create(stream, myrealloc, NULL, &tok) ==
+			HUBBUB_OK);
 
 	params.token_handler.handler = token_handler;
 	params.token_handler.pw = NULL;
@@ -45,7 +53,7 @@ int main(int argc, char **argv)
 	}
 
 	fseek(fp, 0, SEEK_END);
-	len = ftell(fp);
+	origlen = len = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
 
 	while (len > 0) {
@@ -55,7 +63,7 @@ int main(int argc, char **argv)
                         break;
                 
 		assert(parserutils_inputstream_append(stream,
-				buf, bytes_read) == PARSERUTILS_OK);
+				buf, bytes_read) == HUBBUB_OK);
 
 		len -= bytes_read;
 
