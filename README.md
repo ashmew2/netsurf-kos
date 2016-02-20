@@ -1,5 +1,19 @@
+Dead repository.
+Check out the active and current one at 
+www.github.com/ashmew2/nskolibrios
+
+---------------------------------------------------
 netsurf-kos
 ===========
+
+
+This was the first repository that tried to further sourcerer's work on 
+Netsurf. But alas, it seemed like a bad choice to continue working on 
+the port, especially given that it would never make it into the official 
+port list for Netsurf.
+
+No work is done on this repository anymore and only here for historical 
+purposes.
 
 -----------------------------------------------------
 Build instructions and environment setup.
